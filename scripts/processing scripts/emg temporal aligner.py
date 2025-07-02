@@ -8,16 +8,17 @@ import matplotlib.pyplot as plt
 from tkinter import Tk, filedialog
 
 # ======= CONFIGURATION =======
-input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\extracted signals\yogurt 5 ml"  # <-- Set your input folder path here, or leave blank to select interactively
-output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\temporally aligned and averaged"  # <-- Set your output folder path here
-# ============================
+input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\detected signals\dry swallow"  # <-- Set your input folder path here, or leave blank to select interactively
+output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\averaged"  # <-- Set your output folder path here
+n_channels = 8
+# =============================
 
 def load_emg_files(folder):
     files = [os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith('.txt')]
     data_list = []
     for file in files:
         try:
-            data = pd.read_csv(file, sep=',', header=0, usecols=range(22))
+            data = pd.read_csv(file, sep=',', header=0, usecols=range(8))
             data_list.append((file, data))
         except Exception as e:
             print(f"Error loading {file}: {e}")
@@ -40,7 +41,6 @@ def main():
     if not data_list:
         print("No valid .txt files found in the folder.")
         return
-    n_channels = 22
     n_segments = 10
     # For each file, segment data
     all_segments = []  # List of [ [segment1_df, ..., segment10_df], ... ]
@@ -96,7 +96,6 @@ def main():
             return
         # Find the sparsest file (fewest samples)
         min_len = min([data.shape[0] for _, data in data_list])
-        n_channels = 22
         resampled_arrays = []
         for _, data in data_list:
             arr = np.zeros((min_len, n_channels))

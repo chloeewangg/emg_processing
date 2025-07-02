@@ -6,6 +6,7 @@ This script temporally aligns IMU signals from multiple files.
 input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\extracted signals\yogurt 20 ml edited"  # <-- Set your input folder path here, or leave blank to select interactively
 output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\temporally aligned and averaged"  # <-- Set your output folder path here
 align_channel = 18  # <-- Set the channel number (1-based, e.g., 1 for first channel, 22 for last channel)
+n_channels = 22
 # ============================
 
 import os
@@ -62,7 +63,6 @@ def main():
         all_centers.append(center)
         labels.append(os.path.basename(file))
     aligned, center_index = pad_and_align(all_data, all_centers)
-    n_channels = 22
     fig, axes = plt.subplots(n_channels, 1, figsize=(8, 1.5 * n_channels), sharex=True)
     if n_channels == 1:
         axes = [axes]
