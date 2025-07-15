@@ -8,15 +8,21 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import re
 import os
+from scipy.ndimage import gaussian_filter
 
 # ======= MAIN CONFIGURATION (EDIT THESE VALUES) =======
-FILE_PATH = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\temporally aligned and averaged\apple 20 ml averaged.txt"  
-WINDOW_SIZE = 30         # Number of data points per frame
+INPUT_FOLDER = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged"  # Folder containing .txt files
+OUTPUT_FOLDER = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\results\06_18_25\averaged plots 20_200 bandpass\not normalized"  # Folder to save plots
+WINDOW_SIZE = 20         # Number of data points per frame
 PLOT_START_FRAME = 0     # Start frame index for plotting
 PLOT_END_FRAME = None    # End frame index for plotting (None for all)
-normalize_by_max = True  # Set to True to normalize by max in plot interval
-percent_max = 0.8
+normalize_by_max = False  # Set to True to normalize by max in plot interval
+percent_max = 1
 AUTO_SET_MAX_AMPLITUDE = True  # Set to True to auto-set max amplitude from data
+# Smoothing parameters
+SMOOTH = True
+SMOOTH_SIGMA = 10
+INTERP_FACTOR = 20
 # =====================================================
 
 class EMGMuscleActivationMap:
@@ -44,6 +50,7 @@ class EMGMuscleActivationMap:
         self.auto_set_max_amplitude = auto_set_max_amplitude
         self.data = None
         self.emg_channels = None
+        self.zero_channels = set()  # Track channels that are all zeros
         
         # Define the electrode positions in a 4x4 grid as per the mapping:
         self.electrode_positions = {
@@ -72,6 +79,20 @@ class EMGMuscleActivationMap:
                 max_val = np.max(self.emg_channels[:, :16])
                 self.max_amplitude = percent_max * max_val
     
+    def detect_zero_channels(self):
+        """
+        Detect channels that are all zeros across all data points.
+        """
+        if self.emg_channels is None:
+            return
+        
+        for channel in range(self.emg_channels.shape[1]):
+            channel_num = channel + 1  # Data columns are 0-based, channel numbers are 1-based
+            if channel_num in self.electrode_positions:
+                if np.all(self.emg_channels[:, channel] == 0):
+                    self.zero_channels.add(channel_num)
+                    print(f"Channel {channel_num} is all zeros - will be masked")
+    
     def load_data(self):
         """
         Load EMG data from a text file with no header row and 16 columns of data.
@@ -83,6 +104,10 @@ class EMGMuscleActivationMap:
             num_samples = self.emg_channels.shape[0]
             print(f"Loaded {num_samples} data points with {self.emg_channels.shape[1]} channels")
             self.data = self.emg_channels
+            
+            # Detect zero channels
+            self.detect_zero_channels()
+            
             samples_per_window = self.window_size
             self.total_frames = num_samples // samples_per_window
             print(f"Total frames: {self.total_frames} (at {self.window_size} data points per frame)")
@@ -109,13 +134,19 @@ class EMGMuscleActivationMap:
             channel_num = channel + 1  # Data columns are 0-based, channel numbers are 1-based
             if channel_num in self.electrode_positions:
                 row, col = self.electrode_positions[channel_num]
-                grid[row, col] = self.emg_channels[data_idx, channel]
+                # Set to NaN if channel is all zeros, otherwise use the actual value
+                if channel_num in self.zero_channels:
+                    grid[row, col] = np.nan
+                else:
+                    grid[row, col] = self.emg_channels[data_idx, channel]
         return grid
     
-    def create_visualization(self, plot_start_frame=None, plot_end_frame=None, normalize_by_max=False):
+    def create_visualization(self, plot_start_frame=None, plot_end_frame=None, normalize_by_max=False, smooth=False, smooth_sigma=2, interp_factor=10, save_path=None):
         """
         Create the visualization with a grid of frames. Plots frames within the specified frame window if provided.
         If normalize_by_max is True, data is normalized by max in plot interval and color scale is set to [0, 1].
+        If smooth is True, applies Gaussian smoothing to each grid (after upsampling), ignoring NaNs.
+        If save_path is provided, saves the plot instead of showing it.
         """
         if self.data is None:
             print("Error: No data loaded.")
@@ -166,7 +197,39 @@ class EMGMuscleActivationMap:
         for idx, (grid, data_idx) in enumerate(zip(grids_to_plot, indices_to_plot)):
             ax = axes[idx]
             vmax = 1 if normalize_by_max else self.max_amplitude
-            img = ax.imshow(grid, cmap=self.cmap, vmin=0, vmax=vmax, interpolation='gaussian')
+            
+            # Smoothing and upsampling
+            if smooth:
+                # Upsample
+                grid_upsampled = np.kron(grid, np.ones((interp_factor, interp_factor)))
+                # Mask for valid values
+                mask = ~np.isnan(grid_upsampled)
+                grid_filled = np.where(mask, grid_upsampled, 0)
+                # Gaussian filter
+                smoothed = gaussian_filter(grid_filled, sigma=smooth_sigma)
+                smoothed_mask = gaussian_filter(mask.astype(float), sigma=smooth_sigma)
+                with np.errstate(invalid='ignore', divide='ignore'):
+                    result = smoothed / smoothed_mask
+                    result[smoothed_mask == 0] = np.nan
+                # Restore NaN values for zero channels
+                for channel_num in self.zero_channels:
+                    if channel_num in self.electrode_positions:
+                        row, col = self.electrode_positions[channel_num]
+                        # Convert to upsampled coordinates
+                        up_row_start = row * interp_factor
+                        up_row_end = (row + 1) * interp_factor
+                        up_col_start = col * interp_factor
+                        up_col_end = (col + 1) * interp_factor
+                        result[up_row_start:up_row_end, up_col_start:up_col_end] = np.nan
+                
+                cmap_with_white = self.cmap.copy()
+                cmap_with_white.set_bad(color='white')
+                img = ax.imshow(result, cmap=cmap_with_white, vmin=0, vmax=vmax, interpolation='none')
+            else:
+                cmap_with_white = self.cmap.copy()
+                cmap_with_white.set_bad(color='white')
+                img = ax.imshow(grid, cmap=cmap_with_white, vmin=0, vmax=vmax, interpolation='none')
+            
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"Index {data_idx}", fontsize=8)
@@ -178,7 +241,16 @@ class EMGMuscleActivationMap:
         divider = make_axes_locatable(axes[0])
         cax = self.fig.add_axes([0.92, 0.30, 0.015, 0.4])
         self.fig.colorbar(img, cax=cax, label='EMG Amplitude (mV)')
-        plt.show()
+        
+        if save_path:
+            # Ensure output directory exists
+            os.makedirs(os.path.dirname(save_path), exist_ok=True)
+            # Save the plot
+            plt.savefig(save_path, dpi=300, bbox_inches='tight')
+            print(f"Plot saved to: {save_path}")
+            plt.close()  # Close the figure to free memory
+        else:
+            plt.show()
     
     def normalize_channels_by_max(self):
         """
@@ -202,16 +274,78 @@ class EMGMuscleActivationMap:
         self.emg_channels = self.emg_channels / max_vals
         print(f"Channels normalized by their maximum value in the interval frames {start} to {end}.")
 
+def process_all_files(input_folder, output_folder, **kwargs):
+    """
+    Process all .txt files in the input folder and save energy maps to the output folder.
+    
+    Args:
+        input_folder (str): Path to folder containing .txt files
+        output_folder (str): Path to folder where plots will be saved
+        **kwargs: Additional arguments to pass to create_visualization
+    """
+    # Ensure output directory exists
+    os.makedirs(output_folder, exist_ok=True)
+    
+    # Get all .txt files in the input folder
+    txt_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.txt')]
+    
+    if not txt_files:
+        print(f"No .txt files found in {input_folder}")
+        return
+    
+    print(f"Found {len(txt_files)} .txt files to process")
+    
+    for i, filename in enumerate(txt_files, 1):
+        file_path = os.path.join(input_folder, filename)
+        print(f"\nProcessing file {i}/{len(txt_files)}: {filename}")
+        
+        try:
+            # Create EMG map object
+            emg_map = EMGMuscleActivationMap(
+                file_path=file_path,
+                window_size=kwargs.get('window_size', WINDOW_SIZE),
+                plot_start_frame=kwargs.get('plot_start_frame', PLOT_START_FRAME),
+                plot_end_frame=kwargs.get('plot_end_frame', PLOT_END_FRAME),
+                normalize_by_max=kwargs.get('normalize_by_max', normalize_by_max),
+                auto_set_max_amplitude=kwargs.get('auto_set_max_amplitude', AUTO_SET_MAX_AMPLITUDE)
+            )
+            
+            # Generate output filename
+            name_without_extension = filename.rsplit('.', 1)[0]
+            output_filename = f"{name_without_extension} energy map.png"
+            save_path = os.path.join(output_folder, output_filename)
+            
+            # Create and save visualization
+            emg_map.create_visualization(
+                plot_start_frame=kwargs.get('plot_start_frame', PLOT_START_FRAME),
+                plot_end_frame=kwargs.get('plot_end_frame', PLOT_END_FRAME),
+                normalize_by_max=kwargs.get('normalize_by_max', normalize_by_max),
+                smooth=kwargs.get('smooth', SMOOTH),
+                smooth_sigma=kwargs.get('smooth_sigma', SMOOTH_SIGMA),
+                interp_factor=kwargs.get('interp_factor', INTERP_FACTOR),
+                save_path=save_path
+            )
+            
+        except Exception as e:
+            print(f"Error processing {filename}: {e}")
+            continue
+    
+    print(f"\nProcessing complete! Plots saved to: {output_folder}")
+
 def main():
-    emg_map = EMGMuscleActivationMap(
-        file_path=FILE_PATH,
+    # Process all files in the input folder
+    process_all_files(
+        input_folder=INPUT_FOLDER,
+        output_folder=OUTPUT_FOLDER,
         window_size=WINDOW_SIZE,
         plot_start_frame=PLOT_START_FRAME,
         plot_end_frame=PLOT_END_FRAME,
         normalize_by_max=normalize_by_max,
-        auto_set_max_amplitude=AUTO_SET_MAX_AMPLITUDE
+        auto_set_max_amplitude=AUTO_SET_MAX_AMPLITUDE,
+        smooth=SMOOTH,
+        smooth_sigma=SMOOTH_SIGMA,
+        interp_factor=INTERP_FACTOR
     )
-    emg_map.create_visualization(plot_start_frame=PLOT_START_FRAME, plot_end_frame=PLOT_END_FRAME, normalize_by_max=normalize_by_max)
 
 if __name__ == '__main__':
     main()

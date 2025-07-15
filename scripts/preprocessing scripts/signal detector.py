@@ -9,28 +9,28 @@ import os
 import re
 
 # ======= CONFIGURATION =======
-input_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\05_08_25 emg\bandpass 70_110 and notch 60\yogurt 20 ml 2.txt"  # <-- Set your input file path
-sampling_rate = 1000  # Hz
-rms_window_sec = 0.15  # <-- User can adjust the RMS window in seconds
+input_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\preprocessed\dry swallow 4.txt"  
+sampling_rate = 500  # Hz
+rms_window_sec = 0.1  # <-- User can adjust the RMS window in seconds
 
 # User-adjustable standard deviation thresholds for contraction detection
 std_threshold_start = 1  # Number of std above baseline RMS to detect contraction start
 std_threshold_end = 0.25   # Number of std above baseline RMS to detect contraction end
 
 # ===== Channel and delimiter configuration =====
-num_channels = 8  # <-- Set the number of channels in your data
-file_delimiter = '\t'  # <-- Set the delimiter used in your files (e.g., ',' or '\t')
-has_time_column = True  # <-- Set to True if the first column is time, False otherwise
+num_channels = 16  # <-- Set the number of channels in your data
+file_delimiter = ','  # <-- Set the delimiter used in your files (e.g., ',' or '\t')
+has_time_column = False  # <-- Set to True if the first column is time, False otherwise
 
 # ===== Baseline noise configuration =====
-baseline_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\05_08_25 emg\bandpass 70_110 and notch 60\apple 5 ml 4.txt"
-baseline_sampling_rate = 1000  # Hz, set if different from main file
+baseline_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\preprocessed\apple 5 ml 2.txt"
+baseline_sampling_rate = 500  # Hz, set if different from main file
 # Time segment (in seconds) for baseline noise in the baseline file
-baseline_start = 2.6  # <-- Start of baseline noise window (seconds)
-baseline_end = 3      # <-- End of baseline noise window (seconds)
+baseline_start = 2  # <-- Start of baseline noise window (seconds)
+baseline_end = 2.5      # <-- End of baseline noise window (seconds)
 
 # ===== Output configuration =====
-output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\05_08_25 emg\detected signals"  # <-- Set your output folder path
+output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\contraction signals"  # <-- Set your output folder path
 # =============================
 
 def find_data_start_row(filepath, delimiter, num_columns):
@@ -109,7 +109,7 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
     baseline_std = baseline_data.pow(2).std().pow(0.5)
 
     # 5. Exclude the first and last 0.4 seconds for plotting
-    trim_samples = int(0.4 * sampling_rate)
+    trim_samples = int(sampling_rate)
     plot_data = rectified_data.iloc[trim_samples:-trim_samples].reset_index(drop=True)
     plot_time = time[trim_samples:-trim_samples]
     window_samples = int(rms_window_sec * sampling_rate)
@@ -136,7 +136,6 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
                 xticks = np.arange(np.ceil(plot_time[0]), np.floor(plot_time[-1]) + 1, 1)
                 ax.set_xticks(xticks)
                 ax.set_xticklabels([str(int(tick)) for tick in xticks])
-    plt.suptitle("RMS (No Detection) - Select Range for Contraction Detection")
     plt.show()
 
     # 7. Prompt user for start and end time of the search range
@@ -151,15 +150,15 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
         except Exception:
             print("Invalid input. Please enter numeric values.")
 
-    # 8. Prompt user for channels to exclude
+    # 8. Prompt user for additional channels to exclude
     while True:
-        exclude_input = input(f"Enter channel numbers (1-{num_channels}) to exclude from detection, separated by commas (or leave blank for none): ").strip()
+        exclude_input = input(f"Enter additional channel numbers (1-{num_channels}) to exclude from detection, separated by commas (or leave blank for none): ").strip()
         if not exclude_input:
-            excluded_channels = []
+            user_excluded_channels = []
             break
         try:
-            excluded_channels = [int(ch.strip())-1 for ch in exclude_input.split(',') if ch.strip()]
-            if all(0 <= ch < num_channels for ch in excluded_channels):
+            user_excluded_channels = [int(ch.strip())-1 for ch in exclude_input.split(',') if ch.strip()]
+            if all(0 <= ch < num_channels for ch in user_excluded_channels):
                 break
             else:
                 print(f"Please enter valid channel numbers between 1 and {num_channels}.")
@@ -172,7 +171,22 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
     search_time = plot_time[search_mask]
     rolling_rms = search_data.pow(2).rolling(window=window_samples, center=True).mean().pow(0.5)
 
-    # 10. Detect contraction start and end for each channel in the user window
+    # 10. Detect NaN channels and combine with user-excluded channels
+    # Check for NaN channels in the search data
+    nan_channels = []
+    for ch in range(search_data.shape[1]):
+        if search_data.iloc[:, ch].isna().any():
+            nan_channels.append(ch)
+    
+    if nan_channels:
+        print(f"Automatically detected NaN channels: {[ch+1 for ch in nan_channels]}")
+    
+    # Combine NaN channels and user-excluded channels
+    excluded_channels = list(set(nan_channels + user_excluded_channels))
+    if excluded_channels:
+        print(f"Total excluded channels: {[ch+1 for ch in excluded_channels]}")
+
+    # 11. Detect contraction start and end for each channel in the user window
     contraction_points = []
     for ch in range(rolling_rms.shape[1]):
         if ch in excluded_channels:
@@ -200,9 +214,17 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
 
     # Calculate number of included channels and agreement threshold
     num_included = num_channels - len(excluded_channels)
-    agreement_threshold = max(1, int(np.ceil(num_included * 9 / 16)))
+    # Adjust agreement threshold: if there are NaN channels, reduce the required agreement
+    # Original: 9/16 of channels must agree, but now we adjust based on available channels
+    if num_included > 0:
+        # Calculate what 9/16 of total channels would be, then adjust for available channels
+        original_threshold = int(np.ceil(num_channels * 9 / 16))
+        # Subtract the number of NaN channels from the original threshold
+        agreement_threshold = max(1, original_threshold - len(nan_channels))
+    else:
+        agreement_threshold = 1
 
-    # 11. Robust multi-channel contraction start detection (exclude excluded channels)
+    # 12. Robust multi-channel contraction start detection (exclude excluded channels)
     all_starts = [pt[0] for i, pt in enumerate(contraction_points) if pt[0] is not None and i not in excluded_channels]
     all_ends = [pt[1] for i, pt in enumerate(contraction_points) if pt[1] is not None and i not in excluded_channels]
     overall_start = None
@@ -223,7 +245,7 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
                 overall_end = t
                 break
 
-    # 12. Plot with detected contraction start/end lines
+    # 13. Plot with detected contraction start/end lines
     fig, axes = plt.subplots(num_channels, 1, figsize=(12, 18), sharex=True)
     if not hasattr(axes, "__len__"):
         axes = [axes]
@@ -259,7 +281,7 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
     plt.suptitle(f"RMS with Contraction Detection ({num_channels} Channels)")
     plt.show()
 
-    # 13. Print only the overall contraction start and end
+    # 14. Print only the overall contraction start and end
     if overall_start is not None and overall_end is not None:
         print(f"Overall contraction: start = {overall_start:.3f}s, end = {overall_end:.3f}s")
 

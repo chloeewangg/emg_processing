@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 from tkinter import Tk, filedialog
 
 # ======= CONFIGURATION =======
-input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\detected signals\dry swallow"  # <-- Set your input folder path here, or leave blank to select interactively
-output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\averaged"  # <-- Set your output folder path here
-n_channels = 8
+input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\contraction signals\apple 5 ml"
+output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged"  
+n_channels = 22
 # =============================
 
 def load_emg_files(folder):
@@ -18,8 +18,27 @@ def load_emg_files(folder):
     data_list = []
     for file in files:
         try:
-            data = pd.read_csv(file, sep=',', header=0, usecols=range(8))
-            data_list.append((file, data))
+            # Read all columns and handle empty values
+            data = pd.read_csv(file, sep=',', header=0, na_values=['', 'nan', 'NaN'])
+            
+            # Check if we have enough columns
+            if data.shape[1] < n_channels:
+                print(f"File {file} has fewer than {n_channels} columns. Skipping.")
+                continue
+                
+            # Take only the first n_channels columns
+            data = data.iloc[:, :n_channels]
+            
+            # Check for empty channels (all NaN in a column)
+            empty_channels = []
+            for ch in range(n_channels):
+                if data.iloc[:, ch].isna().all():
+                    empty_channels.append(ch)
+            
+            if empty_channels:
+                print(f"File {os.path.basename(file)} has empty channels: {[ch+1 for ch in empty_channels]}")
+            
+            data_list.append((file, data, empty_channels))
         except Exception as e:
             print(f"Error loading {file}: {e}")
     return data_list
@@ -41,37 +60,54 @@ def main():
     if not data_list:
         print("No valid .txt files found in the folder.")
         return
+    
     n_segments = 10
     # For each file, segment data
     all_segments = []  # List of [ [segment1_df, ..., segment10_df], ... ]
-    for file, data in data_list:
-        if data.shape[1] != n_channels:
-            print(f"File {file} does not have 22 channels. Skipping.")
-            continue
+    for file, data, empty_channels in data_list:
         segments = segment_data(data, n_segments)
-        all_segments.append(segments)
+        all_segments.append((segments, empty_channels))
+    
     if not all_segments:
         print("No files with correct channel count.")
         return
+    
+    # Determine which channels have data in at least one file
+    channels_with_data = set()
+    for _, empty_channels in all_segments:
+        for ch in range(n_channels):
+            if ch not in empty_channels:
+                channels_with_data.add(ch)
+    
+    channels_with_data = sorted(list(channels_with_data))
+    n_channels_with_data = len(channels_with_data)
+    
+    print(f"Found {n_channels_with_data} channels with data out of {n_channels} total channels")
+    
     # For each channel, collect all files' data for each segment
-    fig, axes = plt.subplots(n_channels, 1, figsize=(1, 2*n_channels), sharex=True)
-    if n_channels == 1:
+    fig, axes = plt.subplots(n_channels_with_data, 1, figsize=(1, 2*n_channels_with_data), sharex=True)
+    if n_channels_with_data == 1:
         axes = [axes]
     
     # Create legend handles and labels
     legend_handles = []
     legend_labels = []
     
-    for ch in range(n_channels):
-        ax = axes[ch]
-        for file_idx, segments in enumerate(all_segments):
-            file, data = data_list[file_idx]
+    for plot_idx, ch in enumerate(channels_with_data):
+        ax = axes[plot_idx]
+        for file_idx, (segments, empty_channels) in enumerate(all_segments):
+            file, data, _ = data_list[file_idx]
+            
+            # Skip if this channel is empty in this file
+            if ch in empty_channels:
+                continue
+                
             y = data.iloc[:, ch].values
             x = np.linspace(0, 100, len(y))
             line, = ax.plot(x, y, alpha=0.7, linewidth=0.7)
             
             # Store legend info only once (for first channel)
-            if ch == 0:
+            if plot_idx == 0:
                 legend_handles.append(line)
                 legend_labels.append(os.path.basename(file))
         
@@ -94,18 +130,38 @@ def main():
         if not output_folder:
             print("No output folder specified. Please set output_folder at the top of the script.")
             return
+        
         # Find the sparsest file (fewest samples)
-        min_len = min([data.shape[0] for _, data in data_list])
-        resampled_arrays = []
-        for _, data in data_list:
-            arr = np.zeros((min_len, n_channels))
-            for ch in range(n_channels):
+        min_len = min([data.shape[0] for _, data, _ in data_list])
+        
+        # Initialize output array with NaN
+        avg_data = np.full((min_len, n_channels), np.nan)
+        
+        # For each channel, average only files that have valid data
+        for ch in range(n_channels):
+            valid_files_data = []
+            
+            for file_idx, (_, empty_channels) in enumerate(all_segments):
+                # Skip if this channel is empty in this file
+                if ch in empty_channels:
+                    continue
+                    
+                file, data, _ = data_list[file_idx]
                 y = data.iloc[:, ch].values
+                
+                # Resample to min_len
                 x = np.linspace(0, 1, len(y))
                 x_new = np.linspace(0, 1, min_len)
-                arr[:, ch] = np.interp(x_new, x, y)
-            resampled_arrays.append(arr)
-        avg_data = np.mean(resampled_arrays, axis=0)
+                y_resampled = np.interp(x_new, x, y)
+                valid_files_data.append(y_resampled)
+            
+            # Average the valid data for this channel
+            if valid_files_data:
+                avg_data[:, ch] = np.mean(valid_files_data, axis=0)
+                print(f"Channel {ch+1}: averaged across {len(valid_files_data)} files")
+            else:
+                print(f"Channel {ch+1}: no valid data found")
+        
         # Save to output_folder
         os.makedirs(output_folder, exist_ok=True)
         out_path = os.path.join(output_folder, f'{os.path.basename(input_folder)} averaged.txt')
