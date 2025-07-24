@@ -9,7 +9,7 @@ import os
 import re
 
 # ======= CONFIGURATION =======
-input_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\preprocessed\dry swallow 4.txt"  
+input_file = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\original\dry swallow\1.txt"
 sampling_rate = 500  # Hz
 rms_window_sec = 0.1  # <-- User can adjust the RMS window in seconds
 
@@ -23,14 +23,14 @@ file_delimiter = ','  # <-- Set the delimiter used in your files (e.g., ',' or '
 has_time_column = False  # <-- Set to True if the first column is time, False otherwise
 
 # ===== Baseline noise configuration =====
-baseline_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\preprocessed\apple 5 ml 2.txt"
+baseline_file = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\other\baseline noise\1.txt"
 baseline_sampling_rate = 500  # Hz, set if different from main file
 # Time segment (in seconds) for baseline noise in the baseline file
 baseline_start = 2  # <-- Start of baseline noise window (seconds)
-baseline_end = 2.5      # <-- End of baseline noise window (seconds)
+baseline_end = 12      # <-- End of baseline noise window (seconds)
 
 # ===== Output configuration =====
-output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\contraction signals"  # <-- Set your output folder path
+output_folder = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\dry swallow"
 # =============================
 
 def find_data_start_row(filepath, delimiter, num_columns):

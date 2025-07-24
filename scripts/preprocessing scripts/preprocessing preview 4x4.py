@@ -11,7 +11,7 @@ import glob
 # =============================================================================
 
 # Input file path
-INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_15_135401\1.txt"
+INPUT_FILE = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\original\apple 20\1.txt"
 
 # Filter parameters
 SAMPLING_RATE = 500  # Hz
@@ -29,7 +29,7 @@ EXCLUDE_SECONDS = 1  # Seconds to exclude from start and end
 
 # Channels to plot (1-based indexing, e.g., [1, 2, 3, 4] for channels 1, 2, 3, 4)
 # Leave empty or set to None to plot all channels
-CHANNELS_TO_PLOT = [9, 17, 18, 19, 20, 21, 22]  # Change this to a list like [1, 2, 3, 4] to plot specific channels
+CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]  # Change this to a list like [1, 2, 3, 4] to plot specific channels
 
 # =============================================================================
 # HELPER FUNCTIONS
