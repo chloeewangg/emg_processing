@@ -10,7 +10,7 @@ import glob
 # CONFIGURATION SECTION
 # =============================================================================7
 # Input file path   
-INPUT_FILE = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\original\jelly\30.txt"
+INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_28_101628\1.txt"
 
 # Filter parameters
 SAMPLING_RATE = 500  # Hz
@@ -32,7 +32,7 @@ CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 1
 
 # Output directories (user should set these)
 ORAL_PREP_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\oral prep"
-SWALLOW_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\jelly"
+SWALLOW_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\grape"
 
 # Segment extraction parameter
 SEGMENT_DURATION = 2  # seconds (set this value as needed)

@@ -11,7 +11,7 @@ import glob
 # =============================================================================
 
 # Input file path
-INPUT_FILE = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\original\apple 20\1.txt"
+INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_28_101628\1.txt"
 
 # Filter parameters
 SAMPLING_RATE = 500  # Hz

@@ -23,8 +23,7 @@ import numpy as np
 # ======= CONFIGURATION =======
 
 # Input file path (full path to the file you want to process)
-INPUT_FILE_PATH = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\extracted signals\yogurt 20 ml\yogurt 20 ml 2.txt"
-
+INPUT_FILE_PATH = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_28_101628\1.txt"
 # Output directory path (where to save the processed file)
 OUTPUT_DIRECTORY = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\temporally aligned and averaged\cut data"
 
