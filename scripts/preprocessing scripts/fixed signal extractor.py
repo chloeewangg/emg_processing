@@ -10,7 +10,7 @@ import glob
 # CONFIGURATION SECTION
 # =============================================================================7
 # Input file path   
-INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_28_101628\1.txt"
+INPUT_FILE = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\original\carrot\23.txt"
 
 # Filter parameters
 SAMPLING_RATE = 500  # Hz
@@ -24,15 +24,15 @@ NUM_PROCESSED_CHANNELS = 16  # Channels 1-16 to be processed
 TOTAL_CHANNELS = 22  # Total number of channels in the data
 
 # Plotting parameters
-EXCLUDE_SECONDS = 1  # Seconds to exclude from start and end
+EXCLUDE_SECONDS = 0.5  # Seconds to exclude from start and end
 
 # Channels to plot (1-based indexing, e.g., [1, 2, 3, 4] for channels 1, 2, 3, 4)
 # Leave empty or set to None to plot all channels
 CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]  # Change this to a list like [1, 2, 3, 4] to plot specific channels
 
 # Output directories (user should set these)
-ORAL_PREP_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\oral prep"
-SWALLOW_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\grape"
+ORAL_PREP_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\chewing"
+SWALLOW_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\carrot"
 
 # Segment extraction parameter
 SEGMENT_DURATION = 2  # seconds (set this value as needed)

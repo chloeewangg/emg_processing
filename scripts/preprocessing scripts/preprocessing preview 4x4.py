@@ -11,7 +11,7 @@ import glob
 # =============================================================================
 
 # Input file path
-INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_28_101628\1.txt"
+INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_30_112301\1.txt"
 
 # Filter parameters
 SAMPLING_RATE = 500  # Hz
@@ -25,7 +25,7 @@ NUM_PROCESSED_CHANNELS = 16  # Channels 1-16 to be processed
 TOTAL_CHANNELS = 22  # Total number of channels in the data
 
 # Plotting parameters
-EXCLUDE_SECONDS = 1  # Seconds to exclude from start and end
+EXCLUDE_SECONDS = 2  # Seconds to exclude from start and end
 
 # Channels to plot (1-based indexing, e.g., [1, 2, 3, 4] for channels 1, 2, 3, 4)
 # Leave empty or set to None to plot all channels
