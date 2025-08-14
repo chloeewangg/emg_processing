@@ -6,13 +6,14 @@ from sklearn.naive_bayes import GaussianNB
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.multioutput import MultiOutputClassifier
+from sklearn.base import clone
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import pandas as pd
 import numpy as np
 
 svm_model = svm.SVC(kernel='linear', random_state=42)
@@ -39,7 +40,11 @@ multioutput_models = [['SVM', MultiOutputClassifier(svm_model)],
 label_names = ['Substance', 'Volume']
 
 def make_split(x, y, random_state=42):
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, stratify=y, random_state=random_state)
+    if y.ndim == 2:
+        combined_y = y['substance'].astype(str) + '_' + y['volume'].astype(str)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, stratify=combined_y, random_state=random_state)
+    else:
+        x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, stratify=y, random_state=random_state)
 
     y_train = y_train.astype(int)
     y_test = y_test.astype(int)
@@ -57,8 +62,10 @@ def train_single_models(x, y, random_state=42):
     f1_scores = []
 
     x_train_scaled, x_test_scaled, y_train, y_test = make_split(x, y, random_state)
+    
+    models_copy = [[name, clone(model)] for name, model in single_models]
 
-    for model in single_models:
+    for model in models_copy:
         model[1].fit(x_train_scaled, y_train)
         y_pred = model[1].predict(x_test_scaled)
         
@@ -94,7 +101,9 @@ def train_multioutput_models(x, y, random_state=42, show_cm=False, show_metrics=
 
     x_train, x_test, y_train, y_test = make_split(x, y, random_state)
     
-    for model in multioutput_models:
+    models_copy = [[name, clone(model)] for name, model in multioutput_models]
+    
+    for model in models_copy:
         model[1].fit(x_train, y_train)
         y_pred = model[1].predict(x_test)
     
