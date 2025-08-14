@@ -108,4 +108,5 @@ def make_df(data_path, exclude, rectify=False, smooth=False):
     
     df.reset_index(inplace=True)
     df['substance'] = df['substance'].map(class_map)
+    df['volume'] = df['volume'].astype(int)
     return df, class_map
