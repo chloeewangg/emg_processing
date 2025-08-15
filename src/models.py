@@ -39,7 +39,21 @@ multioutput_models = [['SVM', MultiOutputClassifier(svm_model)],
 
 label_names = ['Substance', 'Volume']
 
-def make_split(x, y, random_state=42):
+def make_split(x, y, random_state):
+    '''
+    Splits data into training and test sets.
+
+    args:
+        x (pd.DataFrame): features
+        y (pd.DataFrame): labels
+        random_state (int): random state
+    returns:
+        x_train_scaled (pd.DataFrame): scaled training features
+        x_test_scaled (pd.DataFrame): scaled test features
+        y_train (pd.DataFrame): training labels
+        y_test (pd.DataFrame): test labels
+    '''
+
     if y.ndim == 2:
         combined_y = y['substance'].astype(str) + '_' + y['volume'].astype(str)
         x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, stratify=combined_y, random_state=random_state)
@@ -56,6 +70,19 @@ def make_split(x, y, random_state=42):
     return x_train_scaled, x_test_scaled, y_train, y_test
 
 def train_single_models(x, y, random_state=42):
+    '''
+    Trains single models.
+
+    args:
+        x (pd.DataFrame): features
+        y (pd.DataFrame): labels
+        random_state (int): random state
+    returns:
+        accuracies (list): list of accuracies
+        precisions (list): list of precisions
+        recalls (list): list of recalls
+        f1_scores (list): list of f1 scores
+    '''
     accuracies = []
     precisions = []
     recalls = []
@@ -96,6 +123,20 @@ def train_single_models(x, y, random_state=42):
     return accuracies, precisions, recalls, f1_scores
 
 def train_multioutput_models(x, y, random_state=42, show_cm=False, show_metrics=False):
+    '''
+    Trains multioutput models.
+
+    args:
+        x (pd.DataFrame): features
+        y (pd.DataFrame): labels
+        random_state (int): random state
+        show_cm (bool): whether to show confusion matrices
+        show_metrics (bool): whether to show metrics
+    returns:
+        acc (list): list of accuracies
+        per_label_acc (list): list of per-label accuracies
+    '''
+
     acc = []
     per_label_acc = []
 
@@ -133,6 +174,15 @@ def train_multioutput_models(x, y, random_state=42, show_cm=False, show_metrics=
     return acc, per_label_acc
 
 def print_metrics(exact_acc, per_label_acc):
+    '''
+    Prints metrics for multioutput models.
+
+    args:
+        exact_acc (list): list of exact accuracies
+        per_label_acc (list): list of per-label accuracies
+    returns:
+        None
+    '''
     model_names = [name for name, _ in multioutput_models]
     for i, name in enumerate(model_names):
         print(name)
@@ -141,6 +191,15 @@ def print_metrics(exact_acc, per_label_acc):
         print('----------------------------')
 
 def plot_acc(acc, plt_title):
+    '''
+    Plots accuracy for multioutput models.
+
+    args:
+        acc (list): list of accuracies
+        plt_title (str): title of plot
+    returns:
+        None
+    '''
     model_names = [name for name, _ in multioutput_models]
 
     plt.bar(model_names, acc, width=0.5)

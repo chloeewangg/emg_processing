@@ -7,11 +7,11 @@ import matplotlib.pyplot as plt
 import os
 
 # ======= CONFIGURATION =======
-input_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\shorts removed\water 5 ml 1.txt"  # <-- Set your input file path
-output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\envelopes"  # <-- Set your output folder path
-sampling_rate = 500  # Hz
-rms_window_sec = 0.05  # <-- Adjust the RMS window in seconds
-show_plots = True  # <-- Set to False to disable plotting
+input_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\shorts removed\water 5 ml 1.txt"  
+output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\envelopes"  
+sampling_rate = 500  
+rms_window_sec = 0.05  
+show_plots = True  
 # =============================
 
 def process_and_plot_envelope(input_file, output_folder, sampling_rate, rms_window_sec, show_plots):

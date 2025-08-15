@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 
-sampling_rate = 500 # in Hz
-window_seconds = 0.15 # in seconds
+sampling_rate = 500 # hz
+window_seconds = 0.15 # s
 window_size = int(window_seconds * sampling_rate)
 
 # mean absolute value
@@ -53,8 +53,8 @@ def peak_freq(data, fs=500):
     return freqs[peak_idx]
 
 # shannon entropy
-def shannon_entropy(signal, num_bins=30):
-    hist, bin_edges = np.histogram(signal, bins=num_bins, density=True)
+def shannon_entropy(data, num_bins=30):
+    hist, bin_edges = np.histogram(data, bins=num_bins, density=True)
     prob = hist * np.diff(bin_edges)  
 
     prob = prob[prob > 0]
@@ -63,11 +63,23 @@ def shannon_entropy(signal, num_bins=30):
     return entropy
 
 # integrated emg
-def iemg(signal):
-    return np.sum(np.abs(signal))
+def iemg(data):
+    return np.sum(np.abs(data))
 
 # make df from data path
 def make_df(data_path, exclude, rectify=False, smooth=False):
+    '''
+    Makes feature dataframe from signals in data path.
+    
+    args:
+        data_path (str): path to data
+        exclude (list): list of classes to exclude
+        rectify (bool): whether to rectify the data
+        smooth (bool): whether to smooth the data
+    returns:
+        df (pd.DataFrame): dataframe with features
+        class_map (dict): dictionary of class names to indices
+    '''
     df = pd.DataFrame()
 
     class_map = {}

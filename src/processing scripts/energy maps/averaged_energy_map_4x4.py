@@ -1,5 +1,5 @@
 '''
-This script is used to visualize the EMG muscle activation map of a 3x3 grid of electrodes.
+This script is used to visualize the EMG muscle activation map of a 4x4 grid of electrodes.
 
 It is designed specifically for a file made of multiple averaged EMG signals.
 '''
@@ -8,30 +8,31 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 import re
 import os
-import matplotlib.patches as patches
 from scipy.ndimage import gaussian_filter
 
-# ======= MAIN CONFIGURATION (EDIT THESE VALUES) =======
-INPUT_FOLDER = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\averaged"  # Folder containing .txt files
-OUTPUT_FOLDER = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\results\05_08_25\averaged energy maps\normalized"  # Folder to save plots
-WINDOW_SIZE = 70         # Number of data points per frame
-PLOT_START_FRAME = 0     # Start frame index for plotting
-PLOT_END_FRAME = None    # End frame index for plotting (None for all)
-normalize_by_max = True  # Set to True to normalize by max in plot interval
-percent_max = 0.8
-AUTO_SET_MAX_AMPLITUDE = True  # Set to True to auto-set max amplitude from data
-# Smoothing parameters
+# ============================== CONFIGURATION ==============================
+INPUT_FOLDER = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged"  
+OUTPUT_FOLDER = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\results\06_18_25\averaged plots 20_200 bandpass\not normalized"  
+WINDOW_SIZE = 20  
+PLOT_START_FRAME = 0  
+PLOT_END_FRAME = None   
+
+normalize_by_max = False  
+percent_max = 1
+
+AUTO_SET_MAX_AMPLITUDE = True  
 SMOOTH = True
 SMOOTH_SIGMA = 10
 INTERP_FACTOR = 20
-# =====================================================
+# ===========================================================================
 
 class EMGMuscleActivationMap:
     def __init__(self, file_path, window_size=25, max_amplitude=10,
                  normalize_interval_max=False, plot_start_frame=None, plot_end_frame=None, normalize_by_max=False, auto_set_max_amplitude=True):
         """
         Initialize the EMG muscle activation map visualization.
-        Args:
+
+        args:
             file_path (str): Path to the LabChart text file
             window_size (int): Number of data points per frame
             max_amplitude (float): Maximum EMG amplitude in mV for color scaling
@@ -40,6 +41,9 @@ class EMGMuscleActivationMap:
             plot_end_frame (int): End frame index for plotting (for normalization)
             normalize_by_max (bool): Whether to normalize by max in plot interval
             auto_set_max_amplitude (bool): Whether to auto-set max amplitude from data
+
+        returns:
+            None
         """
         self.file_path = file_path
         self.window_size = window_size
@@ -51,17 +55,14 @@ class EMGMuscleActivationMap:
         self.auto_set_max_amplitude = auto_set_max_amplitude
         self.data = None
         self.emg_channels = None
+        self.zero_channels = set()  # Track channels that are all zeros
         
         # Define the electrode positions in a 4x4 grid as per the mapping:
         self.electrode_positions = {
-            1: (2, 0),  # Ch 1: lower left (row, col)
-            2: (2, 2),  # Ch 2: lower right
-            3: (1, 0),  # Ch 3: left middle
-            4: (1, 2),  # Ch 4: right middle
-            5: (0, 0),  # Ch 5: top left
-            6: (0, 2),  # Ch 6: top right
-            7: (0, 1),  # Ch 7: top middle
-            8: (2, 1)   # Ch 8: bottom middle
+            13: (0, 0), 9: (0, 1), 4: (0, 2), 8: (0, 3),
+            14: (1, 0), 10: (1, 1), 3: (1, 2), 7: (1, 3),
+            15: (2, 0), 11: (2, 1), 2: (2, 2), 6: (2, 3),
+            16: (3, 0), 12: (3, 1), 1: (3, 2), 5: (3, 3)
         }
         
         # Create custom colormap (similar to the one in the reference image)
@@ -69,7 +70,7 @@ class EMGMuscleActivationMap:
         self.cmap = LinearSegmentedColormap.from_list('emg_cmap', colors, N=256)
         
         # Create the 4x4 grid for visualization
-        self.grid = np.zeros((3, 3))
+        self.grid = np.zeros((4, 4))
         
         # Store all grid frames
         self.all_grids = []
@@ -80,8 +81,22 @@ class EMGMuscleActivationMap:
         # Auto-set max_amplitude if not normalizing and option is enabled
         if not self.normalize_by_max and self.auto_set_max_amplitude:
             if self.emg_channels is not None:
-                max_val = np.max(self.emg_channels[:, :9])
+                max_val = np.max(self.emg_channels[:, :16])
                 self.max_amplitude = percent_max * max_val
+    
+    def detect_zero_channels(self):
+        """
+        Detect channels that are all zeros across all data points.
+        """
+        if self.emg_channels is None:
+            return
+        
+        for channel in range(self.emg_channels.shape[1]):
+            channel_num = channel + 1  # Data columns are 0-based, channel numbers are 1-based
+            if channel_num in self.electrode_positions:
+                if np.all(self.emg_channels[:, channel] == 0):
+                    self.zero_channels.add(channel_num)
+                    print(f"Channel {channel_num} is all zeros - will be masked")
     
     def load_data(self):
         """
@@ -94,6 +109,10 @@ class EMGMuscleActivationMap:
             num_samples = self.emg_channels.shape[0]
             print(f"Loaded {num_samples} data points with {self.emg_channels.shape[1]} channels")
             self.data = self.emg_channels
+            
+            # Detect zero channels
+            self.detect_zero_channels()
+            
             samples_per_window = self.window_size
             self.total_frames = num_samples // samples_per_window
             print(f"Total frames: {self.total_frames} (at {self.window_size} data points per frame)")
@@ -110,18 +129,24 @@ class EMGMuscleActivationMap:
     def compute_grid(self, data_idx):
         """
         Compute the grid with EMG values for a specific data index.
-        Args:
+
+        args:
             data_idx (int): Data index in the data array
+        returns:
+            grid (numpy.ndarray): Grid with EMG values
         """
         if self.data is None or data_idx >= self.data.shape[0]:
-            return np.zeros((3, 3))
-        grid = np.zeros((3, 3))
+            return np.zeros((4, 4))
+        grid = np.zeros((4, 4))
         for channel in range(self.emg_channels.shape[1]):
             channel_num = channel + 1  # Data columns are 0-based, channel numbers are 1-based
             if channel_num in self.electrode_positions:
                 row, col = self.electrode_positions[channel_num]
-                grid[row, col] = self.emg_channels[data_idx, channel]
-        grid[1, 1] = np.nan
+                # Set to NaN if channel is all zeros, otherwise use the actual value
+                if channel_num in self.zero_channels:
+                    grid[row, col] = np.nan
+                else:
+                    grid[row, col] = self.emg_channels[data_idx, channel]
         return grid
     
     def create_visualization(self, plot_start_frame=None, plot_end_frame=None, normalize_by_max=False, smooth=False, smooth_sigma=2, interp_factor=10, save_path=None):
@@ -130,6 +155,18 @@ class EMGMuscleActivationMap:
         If normalize_by_max is True, data is normalized by max in plot interval and color scale is set to [0, 1].
         If smooth is True, applies Gaussian smoothing to each grid (after upsampling), ignoring NaNs.
         If save_path is provided, saves the plot instead of showing it.
+
+        args:
+            plot_start_frame (int): Start frame index for plotting
+            plot_end_frame (int): End frame index for plotting
+            normalize_by_max (bool): Whether to normalize by max in plot interval
+            smooth (bool): Whether to smooth the grid
+            smooth_sigma (float): Sigma for Gaussian smoothing
+            interp_factor (int): Interpolation factor for upsampling
+            save_path (str): Path to save the plot
+
+        returns:
+            None
         """
         if self.data is None:
             print("Error: No data loaded.")
@@ -180,10 +217,9 @@ class EMGMuscleActivationMap:
         for idx, (grid, data_idx) in enumerate(zip(grids_to_plot, indices_to_plot)):
             ax = axes[idx]
             vmax = 1 if normalize_by_max else self.max_amplitude
+            
             # Smoothing and upsampling
             if smooth:
-                # Set center to NaN before upsampling
-                grid[1, 1] = np.nan
                 # Upsample
                 grid_upsampled = np.kron(grid, np.ones((interp_factor, interp_factor)))
                 # Mask for valid values
@@ -195,18 +231,25 @@ class EMGMuscleActivationMap:
                 with np.errstate(invalid='ignore', divide='ignore'):
                     result = smoothed / smoothed_mask
                     result[smoothed_mask == 0] = np.nan
-                # Set the center region to NaN (white)
-                center = result.shape[0] // 2
-                half = interp_factor // 2
-                result[center-half:center+half+1, center-half:center+half+1] = np.nan
+                # Restore NaN values for zero channels
+                for channel_num in self.zero_channels:
+                    if channel_num in self.electrode_positions:
+                        row, col = self.electrode_positions[channel_num]
+                        # Convert to upsampled coordinates
+                        up_row_start = row * interp_factor
+                        up_row_end = (row + 1) * interp_factor
+                        up_col_start = col * interp_factor
+                        up_col_end = (col + 1) * interp_factor
+                        result[up_row_start:up_row_end, up_col_start:up_col_end] = np.nan
+                
                 cmap_with_white = self.cmap.copy()
                 cmap_with_white.set_bad(color='white')
                 img = ax.imshow(result, cmap=cmap_with_white, vmin=0, vmax=vmax, interpolation='none')
             else:
-                grid[1, 1] = np.nan
                 cmap_with_white = self.cmap.copy()
                 cmap_with_white.set_bad(color='white')
                 img = ax.imshow(grid, cmap=cmap_with_white, vmin=0, vmax=vmax, interpolation='none')
+            
             ax.set_xticks([])
             ax.set_yticks([])
             ax.set_title(f"Index {data_idx}", fontsize=8)
@@ -255,10 +298,13 @@ def process_all_files(input_folder, output_folder, **kwargs):
     """
     Process all .txt files in the input folder and save energy maps to the output folder.
     
-    Args:
+    args:
         input_folder (str): Path to folder containing .txt files
         output_folder (str): Path to folder where plots will be saved
         **kwargs: Additional arguments to pass to create_visualization
+        
+    returns:
+        None
     """
     # Ensure output directory exists
     os.makedirs(output_folder, exist_ok=True)

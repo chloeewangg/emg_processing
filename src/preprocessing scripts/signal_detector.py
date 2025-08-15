@@ -8,34 +8,37 @@ import numpy as np
 import os
 import re
 
-# ======= CONFIGURATION =======
+# ============================== CONFIGURATION ==============================
 input_file = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\original\dry swallow\1.txt"
-sampling_rate = 500  # Hz
-rms_window_sec = 0.1  # <-- User can adjust the RMS window in seconds
+sampling_rate = 500  
+rms_window_sec = 0.1  
 
-# User-adjustable standard deviation thresholds for contraction detection
-std_threshold_start = 1  # Number of std above baseline RMS to detect contraction start
-std_threshold_end = 0.25   # Number of std above baseline RMS to detect contraction end
+std_threshold_start = 1  
+std_threshold_end = 0.25  
 
-# ===== Channel and delimiter configuration =====
-num_channels = 16  # <-- Set the number of channels in your data
-file_delimiter = ','  # <-- Set the delimiter used in your files (e.g., ',' or '\t')
-has_time_column = False  # <-- Set to True if the first column is time, False otherwise
+num_channels = 16  
+file_delimiter = ','  
+has_time_column = False  
 
-# ===== Baseline noise configuration =====
 baseline_file = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\other\baseline noise\1.txt"
-baseline_sampling_rate = 500  # Hz, set if different from main file
-# Time segment (in seconds) for baseline noise in the baseline file
-baseline_start = 2  # <-- Start of baseline noise window (seconds)
-baseline_end = 12      # <-- End of baseline noise window (seconds)
+baseline_sampling_rate = 500  
+baseline_start = 2  
+baseline_end = 12     
 
-# ===== Output configuration =====
 output_folder = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\07_18_25\extracted signals\dry swallow"
-# =============================
+
+# ===========================================================================
 
 def find_data_start_row(filepath, delimiter, num_columns):
     """
     Returns the row index (0-based) where the first fully numeric data row starts.
+
+    args:
+        filepath (str): path to the file
+        delimiter (str): delimiter used in the file
+        num_columns (int): number of columns in the file
+    returns:
+        int: row index (0-based) where the first fully numeric data row starts
     """
     with open(filepath, 'r') as f:
         for idx, line in enumerate(f):
@@ -55,6 +58,20 @@ def rms_contraction_detector(input_file, sampling_rate, rms_window_sec, baseline
     2. Prompts user for start and end time of the search range.
     3. Performs contraction detection only in that range.
     4. Plots with detected contraction start/end lines as before.
+
+    args:
+        input_file (str): path to the input file
+        sampling_rate (float): sampling rate in Hz
+        rms_window_sec (float): window size for RMS calculation
+        baseline_start (float): start time of the baseline noise window
+        baseline_end (float): end time of the baseline noise window
+        baseline_file (str): path to the baseline noise file
+        baseline_sampling_rate (float): sampling rate of the baseline noise file
+        num_channels (int): number of channels in the data
+        file_delimiter (str): delimiter used in the file
+        has_time_column (bool): whether the file has a time column
+    returns:
+        None
     """
     # 1. Detect and skip header rows for input file
     total_columns = num_channels + 1 if has_time_column else num_channels

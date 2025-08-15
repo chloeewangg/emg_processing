@@ -7,6 +7,16 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import FastICA
 from matplotlib.colors import LinearSegmentedColormap
 
+# ============================== CONFIGURATION ==============================
+file_path = "C:/Users/chloe/OneDrive/Desktop/05_08_25 emg/bandpass 70_110 and notch 60/dry swallow 3.txt"
+
+channels_to_analyze = [1, 2, 3, 4, 5, 6, 7, 8]  
+channel_names = [f"Channel {i+1}" for i in channels_to_analyze]
+
+start_time = 1.5     
+end_time = 3.5      
+# ===========================================================================
+
 def load_labchart_data(file_path):
     """
     Load data from a LabChart text file (already preprocessed).
@@ -98,17 +108,6 @@ def plot_mixing_matrix_heatmaps(mixing_matrix, channel_names):
     plt.show()
 
 def main():
-    # Path to your preprocessed LabChart EMG text file
-    file_path = "C:/Users/chloe/OneDrive/Desktop/05_08_25 emg/bandpass 70_110 and notch 60/dry swallow 3.txt"
-
-    # Choose which channels to analyze (0-indexed)
-    channels_to_analyze = [1, 2, 3, 4, 5, 6, 7, 8]  # Adjust as needed
-    channel_names = [f"Channel {i+1}" for i in channels_to_analyze]
-
-    # Set time interval for plotting (in seconds)
-    start_time = 1.5      # Adjust as needed
-    end_time = 3.5       # Adjust as needed
-
     # Load the data
     print("Loading data...")
     data = load_labchart_data(file_path)

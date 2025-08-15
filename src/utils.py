@@ -2,8 +2,16 @@ import os
 import pandas as pd
 import numpy as np
 
-# get num files in a data path for each class
 def num_files(data_path):
+    '''
+    Gets number of files in a data path for each class.
+    
+    args:
+        data_path (str): path to data
+    returns:
+        df (pd.DataFrame): dataframe with number of files for each class
+    '''
+    
     df = []
     
     for class_name in os.listdir(data_path):

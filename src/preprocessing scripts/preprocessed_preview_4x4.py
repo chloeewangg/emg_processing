@@ -6,54 +6,40 @@ from scipy.signal import butter, filtfilt, iirnotch
 import matplotlib.pyplot as plt
 import glob
 
-# =============================================================================
-# CONFIGURATION SECTION
-# =============================================================================
+# ============================ CONFIGURATION ==============================
 
-# Input file path
 INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_07_30_112301\1.txt"
 
 # Filter parameters
-SAMPLING_RATE = 500  # Hz
-LOW_CUTOFF = 20  # Hz
-HIGH_CUTOFF = 200  # Hz
-TRANSITION_WIDTH_PERCENT = 20  # % of cutoff frequencies
+SAMPLING_RATE = 500  
+LOW_CUTOFF = 20  
+HIGH_CUTOFF = 200  
+TRANSITION_WIDTH_PERCENT = 20  
 
 # Data parameters
 NUM_HEADER_ROWS = 6
-NUM_PROCESSED_CHANNELS = 16  # Channels 1-16 to be processed
-TOTAL_CHANNELS = 22  # Total number of channels in the data
+NUM_PROCESSED_CHANNELS = 16  
+TOTAL_CHANNELS = 22  
 
 # Plotting parameters
-EXCLUDE_SECONDS = 1  # Seconds to exclude from start and end
+EXCLUDE_SECONDS = 1  
 
-# Channels to plot (1-based indexing, e.g., [1, 2, 3, 4] for channels 1, 2, 3, 4)
-# Leave empty or set to None to plot all channels
-CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]  # Change this to a list like [1, 2, 3, 4] to plot specific channels
+CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22] 
 
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
+# ==========================================================================
 
 def create_bandpass_filter(low_cutoff, high_cutoff, sampling_rate, transition_width_percent=20):
     """
     Create a bandpass filter with specified transition width.
     
-    Parameters:
-    -----------
-    low_cutoff : float
-        Lower cutoff frequency in Hz
-    high_cutoff : float
-        Upper cutoff frequency in Hz
-    sampling_rate : float
-        Sampling rate in Hz
-    transition_width_percent : float
-        Transition width as percentage of cutoff frequencies
+    args:
+        low_cutoff (float): lower cutoff frequency in Hz
+        high_cutoff (float): upper cutoff frequency in Hz
+        sampling_rate (float): sampling rate in Hz
+        transition_width_percent (float): transition width as percentage of cutoff frequencies
     
-    Returns:
-    --------
-    b, a : tuple
-        Filter coefficients
+    returns:
+        b, a (tuple): filter coefficients
     """
     # Calculate transition widths
     low_transition = low_cutoff * transition_width_percent / 100
@@ -75,19 +61,13 @@ def create_notch_filter(notch_freq, sampling_rate, quality_factor=30):
     """
     Create a notch filter to remove power line interference.
     
-    Parameters:
-    -----------
-    notch_freq : float
-        Frequency to notch out in Hz
-    sampling_rate : float
-        Sampling rate in Hz
-    quality_factor : float
-        Quality factor of the notch filter
+    args:
+        notch_freq (float): frequency to notch out in Hz
+        sampling_rate (float): sampling rate in Hz
+        quality_factor (float): quality factor of the notch filter
     
-    Returns:
-    --------
-    b, a : tuple
-        Filter coefficients
+    returns:
+        b, a (tuple): filter coefficients
     """
     b, a = iirnotch(notch_freq, quality_factor, sampling_rate)
     return b, a
@@ -96,15 +76,11 @@ def trim_leading_zeros(data):
     """
     Trim leading zeros from the data.
     
-    Parameters:
-    -----------
-    data : numpy.ndarray
-        Input data array
+    args:
+        data (numpy.ndarray): input data array
     
-    Returns:
-    --------
-    numpy.ndarray
-        Data with leading zeros removed
+    returns:
+        numpy.ndarray: data with leading zeros removed
     """
     # Find the first non-zero row
     non_zero_rows = np.any(data != 0, axis=1)
@@ -120,23 +96,15 @@ def apply_filters(data, sampling_rate, low_cutoff, high_cutoff, transition_width
     """
     Apply bandpass and notch filters to the data.
     
-    Parameters:
-    -----------
-    data : numpy.ndarray
-        Input data array (samples x channels)
-    sampling_rate : float
-        Sampling rate in Hz
-    low_cutoff : float
-        Lower cutoff frequency for bandpass filter
-    high_cutoff : float
-        Upper cutoff frequency for bandpass filter
-    transition_width_percent : float
-        Transition width as percentage of cutoff frequencies
+    args:
+        data (numpy.ndarray): input data array (samples x channels)
+        sampling_rate (float): sampling rate in Hz
+        low_cutoff (float): lower cutoff frequency for bandpass filter
+        high_cutoff (float): upper cutoff frequency for bandpass filter
+        transition_width_percent (float): transition width as percentage of cutoff frequencies
     
-    Returns:
-    --------
-    numpy.ndarray
-        Filtered data
+    returns:
+        numpy.ndarray: filtered data
     """
     # Create filters
     bandpass_b, bandpass_a = create_bandpass_filter(low_cutoff, high_cutoff, sampling_rate, transition_width_percent)
@@ -160,10 +128,10 @@ def plot_preprocessed_data(input_file):
     """
     Process a single EMG file and plot all 22 channels.
     
-    Parameters:
-    -----------
-    input_file : str
-        Path to input file
+    args:
+        input_file (str): path to input file
+    returns: 
+        None
     """
     try:
         # Read the data, skipping header rows
@@ -281,14 +249,7 @@ def plot_preprocessed_data(input_file):
     except Exception as e:
         print(f"Error processing {input_file}: {str(e)}")
 
-# =============================================================================
-# MAIN PROCESSING SCRIPT
-# =============================================================================
-
 def main():
-    """
-    Main function to process a single EMG file and plot the results.
-    """
     # Use the configured input file or prompt user if not set
     input_file = INPUT_FILE
     

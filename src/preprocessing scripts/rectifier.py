@@ -6,8 +6,8 @@ import pandas as pd
 import os
 
 # ======= CONFIGURATION =======
-input_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\shorts removed\apple 10 ml 3.txt"  # <-- Set your input file path
-output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\other"  # <-- Set your output folder path
+input_file = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\shorts removed\apple 10 ml 3.txt"  
+output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\other"  
 # =============================
 
 def rectify_and_save(input_file, output_folder):

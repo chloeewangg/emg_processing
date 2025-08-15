@@ -1,7 +1,6 @@
 '''
-This script is used to visualize the EMG muscle activation map of a 4x4 grid of electrodes.
+This script is used to visualize the EMG muscle activation map of a 3x3 grid of electrodes.
 '''
-
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
@@ -9,16 +8,14 @@ from matplotlib.colors import LinearSegmentedColormap
 import re
 import os
 
-# ======= MAIN CONFIGURATION (EDIT THESE VALUES) =======
-FILE_PATH = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\envelopes\apple 10 ml 1 rms envelope.txt"  
-SAMPLING_RATE = 500         # EMG sampling rate in Hz
-WINDOW_SIZE = 0.05         # Time window size in seconds
-MAX_AMPLITUDE = 10        # Maximum EMG amplitude in mV for color scaling
-PLOT_START_TIME = 3.5     # Start time (in seconds) for plotting
-PLOT_END_TIME = 4.9   # End time (in seconds) for plotting
-show_minutes = False  # Set to True to show time labels as mm:ss.s, False for seconds
-normalize_by_max = True  # Set to True to normalize by max in plot interval
-# =====================================================
+# ============================== CONFIGURATION ==============================
+FILE_PATH = "C:/Users/chloe/OneDrive/Desktop/05_08_25 emg/bandpass_and_notch/yogurt 20 ml 2.txt"  
+SAMPLING_RATE = 1000        
+WINDOW_SIZE = 0.01          
+MAX_AMPLITUDE = 1       
+PLOT_START_TIME = 6     
+PLOT_END_TIME = 7  
+# ===========================================================================
 
 class EMGMuscleActivationMap:
     def __init__(self, file_path, sampling_rate=1000, window_size=0.1, max_amplitude=0.025,
@@ -46,25 +43,27 @@ class EMGMuscleActivationMap:
         self.time = None
         self.emg_channels = None
         
-        # Define the electrode positions in a 4x4 grid as per the mapping:
-        # 13  9  4  8
-        # 14 10  3  7
-        # 15 11  2  6
-        # 16 12  1  5
-        # Channel numbers are 1-based
+        # Channel mapping:
+        # 6 8 7
+        # 4   5  
+        # 2 9 3
         self.electrode_positions = {
-            13: (0, 0), 9: (0, 1), 4: (0, 2), 8: (0, 3),
-            14: (1, 0), 10: (1, 1), 3: (1, 2), 7: (1, 3),
-            15: (2, 0), 11: (2, 1), 2: (2, 2), 6: (2, 3),
-            16: (3, 0), 12: (3, 1), 1: (3, 2), 5: (3, 3)
+            2: (2, 0),  # Ch 2: lower left (row, col)
+            3: (2, 2),  # Ch 3: lower right
+            4: (1, 0),  # Ch 4: left middle
+            5: (1, 2),  # Ch 5: right middle
+            6: (0, 0),  # Ch 6: top left
+            7: (0, 2),  # Ch 7: top right
+            8: (0, 1),  # Ch 8: top middle
+            9: (2, 1)   # Ch 9: bottom middle
         }
         
         # Create custom colormap (similar to the one in the reference image)
         colors = [(0, 0, 1), (0, 1, 1), (1, 1, 0), (1, 0, 0)]  # Blue -> Cyan -> Yellow -> Red
         self.cmap = LinearSegmentedColormap.from_list('emg_cmap', colors, N=256)
         
-        # Create the 4x4 grid for visualization
-        self.grid = np.zeros((4, 4))
+        # Create the 3x3 grid for visualization
+        self.grid = np.zeros((3, 3))
         
         # Store all grid frames
         self.all_grids = []
@@ -75,31 +74,63 @@ class EMGMuscleActivationMap:
     
     def load_data(self):
         """
-        Load EMG data from a text file with no header row and 16 columns of data.
-        The data is expected to be comma-separated. A time column is generated 
-        based on the sampling rate.
+        Load EMG data from a LabChart text file.
         """
         print(f"Loading data from {self.file_path}...")
+        
         try:
-            # Load data from a comma-separated file with no header.
-            # This expects 16 columns of rectified and smoothed EMG data.
-            self.emg_channels = np.loadtxt(self.file_path, delimiter=',')
-
-            # Generate the time vector since it's not in the file
-            num_samples = self.emg_channels.shape[0]
-            self.time = np.arange(num_samples) / self.sampling_rate
-
-            # The data is assumed to be already processed (rectified and smoothed),
-            # so taking the absolute value is no longer necessary.
-
+            # Find data section (skip header)
+            with open(self.file_path, 'r') as f:
+                lines = f.readlines()
+            
+            data_start_idx = 0
+            for i, line in enumerate(lines):
+                if line.strip().startswith('0') or '\t' in line:
+                    data_start_idx = i
+                    break
+            
+            # Process data lines
+            data_lines = lines[data_start_idx:]
+            data_array = []
+            
+            for line in data_lines:
+                try:
+                    values = line.strip().split('\t')
+                    if len(values) >= 9:  # Time + 8 channels
+                        data_array.append([float(val) for val in values[:9]])
+                except ValueError:
+                    continue  # Skip lines that cannot be converted to float
+            
+            if not data_array:
+                print("Error: No valid data found in the file")
+                return
+                
+            # Convert to numpy array
+            data_array = np.array(data_array)
+            
+            # Extract time and EMG channels
+            self.time = data_array[:, 0]
+            self.emg_channels = data_array[:, 1:9]  # 8 EMG channels
+            
+            # Preprocess data (take absolute values)
+            self.emg_channels = np.abs(self.emg_channels)
+            
+            # Apply normalization by max in plot interval if selected
+            if self.normalize_interval_max and self.plot_start_time is not None and self.plot_end_time is not None:
+                mask = (self.time >= self.plot_start_time) & (self.time <= self.plot_end_time)
+                interval_max = np.max(self.emg_channels[mask], axis=0, keepdims=True)
+                interval_max[interval_max == 0] = 1  # Prevent division by zero
+                self.emg_channels = self.emg_channels / interval_max
+                self.max_amplitude = 1.0
+            
             print(f"Loaded {len(self.time)} data points with {self.emg_channels.shape[1]} channels")
-            self.data = self.emg_channels # For compatibility with other parts of the class
-
+            self.data = data_array
+            
             # Calculate total number of frames
             samples_per_window = int(self.window_size * self.sampling_rate)
             self.total_frames = len(self.time) // samples_per_window
             print(f"Total frames: {self.total_frames} (at {self.window_size}s window)")
-
+            
             # Pre-compute all grid frames
             print("Pre-computing all grid frames...")
             for frame_idx in range(self.total_frames):
@@ -107,9 +138,9 @@ class EMGMuscleActivationMap:
                 grid = self.compute_grid(time_idx)
                 self.all_grids.append(grid.copy())
                 self.all_times.append(self.time[time_idx])
-
+                
             print(f"Pre-computed {len(self.all_grids)} frames")
-
+            
         except Exception as e:
             print(f"Error loading data: {e}")
     
@@ -121,49 +152,29 @@ class EMGMuscleActivationMap:
             time_idx (int): Time index in the data array
         """
         if self.data is None or time_idx >= len(self.time):
-            return np.zeros((4, 4))
+            return np.zeros((3, 3))
         
         # Reset grid to zeros
-        grid = np.zeros((4, 4))
+        grid = np.zeros((3, 3))
         
         # Fill grid with EMG values
-        # The data file may only have 8 channels, so we need to map them to the correct channel numbers
-        # We'll assume the data columns are channels 1-8 (i.e., emg_channels[:, 0] is channel 1, etc.)
-        # If you have more channels, adjust accordingly
-        for channel in range(self.emg_channels.shape[1]):
-            channel_num = channel + 1  # Data columns are 0-based, channel numbers are 1-based
+        for channel in range(8):
+            # Channel numbers in the data are 0-based, but in the mapping they're 1-based
+            # and we start with channel 2, so we add 2 to the channel index
+            channel_num = channel + 2
             if channel_num in self.electrode_positions:
                 row, col = self.electrode_positions[channel_num]
                 grid[row, col] = self.emg_channels[time_idx, channel]
         
         return grid
     
-    def create_visualization(self, plot_start_time=None, plot_end_time=None, show_minutes=False, normalize_by_max=False):
+    def create_visualization(self, plot_start_time=None, plot_end_time=None):
         """
         Create the interactive visualization with a slider for time navigation.
         Only plots frames within the specified time window if provided.
-        If show_minutes is True, time labels are shown as mm:ss.s; otherwise, as seconds.
-        If normalize_by_max is True, data is normalized by max in interval and color scale is set to [0, 1].
         """
-        if self.data is None:
-            print("Error: No data loaded.")
-            return
-        # Normalize and recompute grids if requested
-        if normalize_by_max:
-            self.normalize_channels_by_max()
-            # Recompute all_grids and all_times using normalized data
-            self.all_grids = []
-            self.all_times = []
-            samples_per_window = int(self.window_size * self.sampling_rate)
-            self.total_frames = len(self.time) // samples_per_window
-            for frame_idx in range(self.total_frames):
-                time_idx = min(frame_idx * samples_per_window, len(self.time) - 1)
-                grid = self.compute_grid(time_idx)
-                self.all_grids.append(grid.copy())
-                self.all_times.append(self.time[time_idx])
-            self.max_amplitude = 1  # Override max_amplitude for normalized data
-        if not self.all_grids:
-            print("Error: No frames computed.")
+        if self.data is None or not self.all_grids:
+            print("Error: No data loaded or no frames computed.")
             return
         
         # Filter frames by time window if specified
@@ -178,6 +189,9 @@ class EMGMuscleActivationMap:
             grids_to_plot = self.all_grids
             times_to_plot = self.all_times
         
+        # Set the middle square to np.nan for all grids
+        for grid in grids_to_plot:
+            grid[1, 1] = np.nan
         # Set the colormap's bad color to white
         cmap_with_white = self.cmap.copy()
         cmap_with_white.set_bad(color='white')
@@ -217,17 +231,10 @@ class EMGMuscleActivationMap:
         # Plot each frame
         for idx, (grid, time) in enumerate(zip(grids_to_plot, times_to_plot)):
             ax = axes[idx]
-            # Set color scale depending on normalization
-            vmax = 1 if normalize_by_max else self.max_amplitude
-            img = ax.imshow(grid, cmap=cmap_with_white, vmin=0, vmax=vmax, interpolation='gaussian')
+            img = ax.imshow(grid, cmap=cmap_with_white, vmin=0, vmax=self.max_amplitude)
             ax.set_xticks([])
             ax.set_yticks([])
-            if show_minutes:
-                minutes = int(time // 60)
-                seconds = time % 60
-                ax.set_title(f"{minutes:02d}:{seconds:04.1f}", fontsize=8)
-            else:
-                ax.set_title(f"{time:.3f}s", fontsize=8)
+            ax.set_title(f"Time: {time:.3f}s", fontsize=8)
         
         # Hide empty subplots
         for idx in range(num_frames, len(axes)):
@@ -241,45 +248,76 @@ class EMGMuscleActivationMap:
         self.fig.colorbar(img, cax=cax, label='EMG Amplitude (mV)')
         plt.show()
     
-    def normalize_channels_by_max(self):
+    def plot_channel_mse(self, plot_start_time=None, plot_end_time=None):
         """
-        Normalize each EMG channel by its maximum value within the interval
-        [self.plot_start_time, self.plot_end_time].
-        Updates self.emg_channels in-place so that each channel's maximum in this interval is 1 (unless the channel is all zeros).
-        If the time range is not set or results in no data, prints a warning and does not modify the data.
+        Plot normalized mean squared error between paired channels (2-3, 4-5, 6-7) over the entire time interval of the data, excluding the first and last 0.2 seconds. Each in its own subplot.
+        Each MSE value is divided by the mean of the two channel values at that point.
+        All subplots share the same y-axis scale for direct comparison.
         """
-        if self.emg_channels is None or self.time is None:
-            print("No EMG data loaded.")
-            return
-        if self.plot_start_time is None or self.plot_end_time is None:
-            print("plot_start_time and plot_end_time must be set to normalize by interval max.")
-            return
-        t_start = self.plot_start_time
-        t_end = self.plot_end_time
-        mask = (self.time >= t_start) & (self.time <= t_end)
-        if not np.any(mask):
-            print(f"No data in the interval {t_start} to {t_end} seconds. No normalization applied.")
-            return
-        interval_data = self.emg_channels[mask]
-        max_vals = np.max(interval_data, axis=0, keepdims=True)
-        # Print max value for each channel
-        for idx, val in enumerate(max_vals.flatten(), 1):
-            print(f"Channel {idx} max in interval: {val:.6f}")
-        max_vals[max_vals == 0] = 1  # Prevent division by zero
-        self.emg_channels = self.emg_channels / max_vals
-        print(f"Channels normalized by their maximum value in the interval {t_start:.2f} to {t_end:.2f} seconds.")
+        # Use the full time and channel data
+        times = self.time
+        emg = self.emg_channels
+
+        # Exclude the first and last 0.2 seconds
+        mask = (times >= (times[0] + 0.2)) & (times <= (times[-1] - 0.2))
+        times = times[mask]
+        emg = emg[mask]
+
+        epsilon = 1e-8
+        # Channel indices: channel 2 = 0, 3 = 1, 4 = 2, 5 = 3, 6 = 4, 7 = 5
+        mean_2_3 = (emg[:, 0] + emg[:, 1]) / 2
+        mse_2_3 = ((emg[:, 0] - emg[:, 1]) ** 2) / (mean_2_3 + epsilon)
+
+        mean_4_5 = (emg[:, 2] + emg[:, 3]) / 2
+        mse_4_5 = ((emg[:, 2] - emg[:, 3]) ** 2) / (mean_4_5 + epsilon)
+
+        mean_6_7 = (emg[:, 4] + emg[:, 5]) / 2
+        mse_6_7 = ((emg[:, 4] - emg[:, 5]) ** 2) / (mean_6_7 + epsilon)
+
+        # Find global min and max for y-axis
+        all_mse = np.concatenate([mse_2_3, mse_4_5, mse_6_7])
+        y_min = np.min(all_mse)
+        y_max = np.max(all_mse)
+
+        fig, axes = plt.subplots(3, 1, figsize=(12, 10), sharex=True)
+
+        axes[0].plot(times, mse_2_3, label='Channels 2-3', color='tab:blue', alpha=0.8)
+        axes[0].set_ylabel('Normalized MSE')
+        axes[0].set_title('Channels 2-3')
+        axes[0].set_ylim(y_min, y_max)
+        axes[0].grid(True)
+
+        axes[1].plot(times, mse_4_5, label='Channels 4-5', color='tab:orange', alpha=0.8)
+        axes[1].set_ylabel('Normalized MSE')
+        axes[1].set_title('Channels 4-5')
+        axes[1].set_ylim(y_min, y_max)
+        axes[1].grid(True)
+
+        axes[2].plot(times, mse_6_7, label='Channels 6-7', color='tab:green', alpha=0.8)
+        axes[2].set_ylabel('Normalized MSE')
+        axes[2].set_title('Channels 6-7')
+        axes[2].set_xlabel('Time (s)')
+        axes[2].set_ylim(y_min, y_max)
+        axes[2].grid(True)
+
+        plt.tight_layout()
+        plt.show()
 
 def main():
     """Main function to run the EMG Muscle Activation Map."""
+    # Set normalization option here
+    normalize_interval_max = True  # Set to True to normalize by max in plot interval
     emg_map = EMGMuscleActivationMap(
         file_path=FILE_PATH,
         sampling_rate=SAMPLING_RATE,
         window_size=WINDOW_SIZE,
         max_amplitude=MAX_AMPLITUDE,
+        normalize_interval_max=normalize_interval_max,
         plot_start_time=PLOT_START_TIME,
         plot_end_time=PLOT_END_TIME
     )
-    emg_map.create_visualization(plot_start_time=PLOT_START_TIME, plot_end_time=PLOT_END_TIME, show_minutes=show_minutes, normalize_by_max=normalize_by_max)
+    emg_map.create_visualization(plot_start_time=PLOT_START_TIME, plot_end_time=PLOT_END_TIME)
+    # emg_map.plot_channel_mse(plot_start_time=PLOT_START_TIME, plot_end_time=PLOT_END_TIME)
 
 if __name__ == '__main__':
     main()

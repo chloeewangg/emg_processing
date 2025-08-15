@@ -7,11 +7,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tkinter import Tk, filedialog
 
-# ======= CONFIGURATION =======
+# ============================== CONFIGURATION ==============================
 input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\contraction signals\apple 5 ml"
 output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged"  
 n_channels = 22
-# =============================
+# ===========================================================================
 
 def load_emg_files(folder):
     files = [os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith('.txt')]

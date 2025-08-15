@@ -9,51 +9,51 @@ import re
 import os
 from scipy.ndimage import gaussian_filter
 
-# ======= MAIN CONFIGURATION (EDIT THESE VALUES) =======
+# ============================== CONFIGURATION ==============================
 FILE_PATHS = [
-    r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\averaged\apple 20 ml averaged.txt",
-    r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\averaged\apple 10 ml averaged.txt", 
-    r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\05_08_25\averaged\apple 5 ml averaged.txt"
+    r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged\water 5 ml averaged.txt",
+    r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged\apple 5 ml averaged.txt", 
+    r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged\yogurt 5 ml averaged.txt"
 ]
-WINDOW_SIZE = 70        # Number of data points per frame (same across all plots)
-SAVE_DIR = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\results\05_08_25\3x3 comparison plots\apple volumes"  # Directory to save plots
-# Smoothing parameters
+
+WINDOW_SIZE = 30  
+SAVE_DIR = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\results\06_18_25\4x4 comparison plots 20_200\5 ml"  
 SMOOTH = True
 SMOOTH_SIGMA = 10
 INTERP_FACTOR = 20
-# =====================================================
+# ===========================================================================
 
 class EMGMuscleActivationMap:
     def __init__(self, file_path, window_size=25):
         """
         Initialize the EMG muscle activation map visualization.
-        Args:
+        
+        args:
             file_path (str): Path to the LabChart text file
             window_size (int): Number of data points per frame
+        returns:
+            None
         """
         self.file_path = file_path
         self.window_size = window_size
         self.data = None
         self.emg_channels = None
+        self.zero_channels = set()  # Track channels that are all zeros
         
-        # Define the electrode positions in a 3x3 grid as per the mapping:
+        # Define the electrode positions in a 4x4 grid as per the mapping:
         self.electrode_positions = {
-            1: (2, 0),  # Ch 1: lower left (row, col)
-            2: (2, 2),  # Ch 2: lower right
-            3: (1, 0),  # Ch 3: left middle
-            4: (1, 2),  # Ch 4: right middle
-            5: (0, 0),  # Ch 5: top left
-            6: (0, 2),  # Ch 6: top right
-            7: (0, 1),  # Ch 7: top middle
-            8: (2, 1)   # Ch 8: bottom middle
+            13: (0, 0), 9: (0, 1), 4: (0, 2), 8: (0, 3),
+            14: (1, 0), 10: (1, 1), 3: (1, 2), 7: (1, 3),
+            15: (2, 0), 11: (2, 1), 2: (2, 2), 6: (2, 3),
+            16: (3, 0), 12: (3, 1), 1: (3, 2), 5: (3, 3)
         }
         
         # Create custom colormap (similar to the one in the reference image)
         colors = [(0, 0, 1), (0, 1, 1), (1, 1, 0), (1, 0, 0)]  # Blue -> Cyan -> Yellow -> Red
         self.cmap = LinearSegmentedColormap.from_list('emg_cmap', colors, N=256)
         
-        # Create the 3x3 grid for visualization
-        self.grid = np.zeros((3, 3))
+        # Create the 4x4 grid for visualization
+        self.grid = np.zeros((4, 4))
         
         # Store all grid frames
         self.all_grids = []
@@ -61,6 +61,20 @@ class EMGMuscleActivationMap:
         
         # Load the data
         self.load_data()
+    
+    def detect_zero_channels(self):
+        """
+        Detect channels that are all zeros across all data points.
+        """
+        if self.emg_channels is None:
+            return
+        
+        for channel in range(self.emg_channels.shape[1]):
+            channel_num = channel + 1  # Data columns are 0-based, channel numbers are 1-based
+            if channel_num in self.electrode_positions:
+                if np.all(self.emg_channels[:, channel] == 0):
+                    self.zero_channels.add(channel_num)
+                    print(f"Channel {channel_num} is all zeros - will be masked")
     
     def load_data(self):
         """
@@ -73,6 +87,10 @@ class EMGMuscleActivationMap:
             num_samples = self.emg_channels.shape[0]
             print(f"Loaded {num_samples} data points with {self.emg_channels.shape[1]} channels")
             self.data = self.emg_channels
+            
+            # Detect zero channels
+            self.detect_zero_channels()
+            
             samples_per_window = self.window_size
             self.total_frames = num_samples // samples_per_window
             print(f"Total frames: {self.total_frames} (at {self.window_size} data points per frame)")
@@ -89,19 +107,24 @@ class EMGMuscleActivationMap:
     def compute_grid(self, data_idx):
         """
         Compute the grid with EMG values for a specific data index.
-        Args:
+        
+        args:
             data_idx (int): Data index in the data array
+        returns:
+            grid (numpy.ndarray): Grid with EMG values
         """
         if self.data is None or data_idx >= self.data.shape[0]:
-            return np.zeros((3, 3))
-        grid = np.zeros((3, 3))
+            return np.zeros((4, 4))
+        grid = np.zeros((4, 4))
         for channel in range(self.emg_channels.shape[1]):
             channel_num = channel + 1  # Data columns are 0-based, channel numbers are 1-based
             if channel_num in self.electrode_positions:
                 row, col = self.electrode_positions[channel_num]
-                grid[row, col] = self.emg_channels[data_idx, channel]
-        # Set center to NaN for white display
-        grid[1, 1] = np.nan
+                # Set to NaN if channel is all zeros, otherwise use the actual value
+                if channel_num in self.zero_channels:
+                    grid[row, col] = np.nan
+                else:
+                    grid[row, col] = self.emg_channels[data_idx, channel]
         return grid
     
     def normalize_channels_by_max(self):
@@ -123,9 +146,12 @@ class SwallowComparisonHeatMap:
     def __init__(self, file_paths, window_size=25):
         """
         Initialize the swallow comparison heat map visualization for multiple files.
-        Args:
+            
+        args:
             file_paths (list): List of paths to the LabChart text files
             window_size (int): Number of data points per frame (same across all plots)
+        returns:
+            None
         """
         self.file_paths = file_paths
         self.window_size = window_size
@@ -230,10 +256,8 @@ class SwallowComparisonHeatMap:
                 if idx < len(sub_axes):
                     sub_ax = sub_axes[idx]
                     
-                    # Smoothing and upsampling
+                    # Apply Gaussian smoothing if enabled
                     if SMOOTH:
-                        # Set center to NaN before upsampling
-                        grid[1, 1] = np.nan
                         # Upsample
                         grid_upsampled = np.kron(grid, np.ones((INTERP_FACTOR, INTERP_FACTOR)))
                         # Mask for valid values
@@ -245,14 +269,19 @@ class SwallowComparisonHeatMap:
                         with np.errstate(invalid='ignore', divide='ignore'):
                             result = smoothed / smoothed_mask
                             result[smoothed_mask == 0] = np.nan
-                        # Set the center region to NaN (white)
-                        center = result.shape[0] // 2
-                        half = INTERP_FACTOR // 2
-                        result[center-half:center+half+1, center-half:center+half+1] = np.nan
+                        # Restore NaN values for zero channels
+                        for channel_num in emg_map.zero_channels:
+                            if channel_num in emg_map.electrode_positions:
+                                row, col = emg_map.electrode_positions[channel_num]
+                                # Convert to upsampled coordinates
+                                up_row_start = row * INTERP_FACTOR
+                                up_row_end = (row + 1) * INTERP_FACTOR
+                                up_col_start = col * INTERP_FACTOR
+                                up_col_end = (col + 1) * INTERP_FACTOR
+                                result[up_row_start:up_row_end, up_col_start:up_col_end] = np.nan
+                        
                         img = sub_ax.imshow(result, cmap=cmap_with_white, vmin=0, vmax=1, interpolation='none')
                     else:
-                        # Set center to NaN for white display
-                        grid[1, 1] = np.nan
                         img = sub_ax.imshow(grid, cmap=cmap_with_white, vmin=0, vmax=1, interpolation='none')
                     
                     sub_ax.set_xticks([])

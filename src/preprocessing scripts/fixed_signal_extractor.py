@@ -6,60 +6,48 @@ from scipy.signal import butter, filtfilt, iirnotch
 import matplotlib.pyplot as plt
 import glob
 
-# =============================================================================
-# CONFIGURATION SECTION
-# =============================================================================7
+# ============================ CONFIGURATION ==============================
 # Input file path   
 INPUT_FILE = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian\original\yogurt 10\1.txt"
 
 # Filter parameters
-SAMPLING_RATE = 500  # Hz
-LOW_CUTOFF = 20  # Hz
-HIGH_CUTOFF = 200  # Hz
-TRANSITION_WIDTH_PERCENT = 20  # % of cutoff frequencies
+SAMPLING_RATE = 500  
+LOW_CUTOFF = 20  
+HIGH_CUTOFF = 200  
+TRANSITION_WIDTH_PERCENT = 20  
 
 # Data parameters
 NUM_HEADER_ROWS = 6
-NUM_PROCESSED_CHANNELS = 16  # Channels 1-16 to be processed
-TOTAL_CHANNELS = 22  # Total number of channels in the data
+NUM_PROCESSED_CHANNELS = 16  
+TOTAL_CHANNELS = 22 
 
 # Plotting parameters
-EXCLUDE_SECONDS = 0.5  # Seconds to exclude from start and end
+EXCLUDE_SECONDS = 0.5 
 
 # Channels to plot (1-based indexing, e.g., [1, 2, 3, 4] for channels 1, 2, 3, 4)
 # Leave empty or set to None to plot all channels
-CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]  # Change this to a list like [1, 2, 3, 4] to plot specific channels
+CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]  
 
-# Output directories (user should set these)
+# Output directories
 ORAL_PREP_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian\extracted signals\other"
 SWALLOW_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian\extracted signals\yogurt 10"
 
 # Segment extraction parameter
-SEGMENT_DURATION = 2  # seconds (set this value as needed)
-
-# =============================================================================
-# HELPER FUNCTIONS
-# =============================================================================
+SEGMENT_DURATION = 2 
+# ==========================================================================
 
 def create_bandpass_filter(low_cutoff, high_cutoff, sampling_rate, transition_width_percent=20):
     """
     Create a bandpass filter with specified transition width.
     
-    Parameters:
-    -----------
-    low_cutoff : float
-        Lower cutoff frequency in Hz
-    high_cutoff : float
-        Upper cutoff frequency in Hz
-    sampling_rate : float
-        Sampling rate in Hz
-    transition_width_percent : float
-        Transition width as percentage of cutoff frequencies
+    args:
+    low_cutoff (float): lower cutoff frequency in Hz
+    high_cutoff (float): upper cutoff frequency in Hz
+    sampling_rate (float): sampling rate in Hz
+    transition_width_percent (float): transition width as percentage of cutoff frequencies
     
-    Returns:
-    --------
-    b, a : tuple
-        Filter coefficients
+    returns:
+    b, a (tuple): filter coefficients
     """
     # Calculate transition widths
     low_transition = low_cutoff * transition_width_percent / 100
@@ -81,19 +69,13 @@ def create_notch_filter(notch_freq, sampling_rate, quality_factor=30):
     """
     Create a notch filter to remove power line interference.
     
-    Parameters:
-    -----------
-    notch_freq : float
-        Frequency to notch out in Hz
-    sampling_rate : float
-        Sampling rate in Hz
-    quality_factor : float
-        Quality factor of the notch filter
+    parameters:
+        notch_freq (float): frequency to notch out in Hz
+        sampling_rate (float): sampling rate in Hz
+        quality_factor (float): quality factor of the notch filter
     
-    Returns:
-    --------
-    b, a : tuple
-        Filter coefficients
+    returns:
+        b, a (tuple): filter coefficients
     """
     b, a = iirnotch(notch_freq, quality_factor, sampling_rate)
     return b, a
@@ -102,15 +84,11 @@ def trim_leading_zeros(data):
     """
     Trim leading zeros from the data.
     
-    Parameters:
-    -----------
-    data : numpy.ndarray
-        Input data array
+    args:
+        data (numpy.ndarray): input data array
     
-    Returns:
-    --------
-    numpy.ndarray
-        Data with leading zeros removed
+    returns:
+        numpy.ndarray: data with leading zeros removed
     """
     # Find the first non-zero row
     non_zero_rows = np.any(data != 0, axis=1)
@@ -126,23 +104,15 @@ def apply_filters(data, sampling_rate, low_cutoff, high_cutoff, transition_width
     """
     Apply bandpass and notch filters to the data.
     
-    Parameters:
-    -----------
-    data : numpy.ndarray
-        Input data array (samples x channels)
-    sampling_rate : float
-        Sampling rate in Hz
-    low_cutoff : float
-        Lower cutoff frequency for bandpass filter
-    high_cutoff : float
-        Upper cutoff frequency for bandpass filter
-    transition_width_percent : float
-        Transition width as percentage of cutoff frequencies
+    args:
+        data (numpy.ndarray): input data array (samples x channels)
+        sampling_rate (float): sampling rate in Hz
+        low_cutoff (float): lower cutoff frequency for bandpass filter
+        high_cutoff (float): upper cutoff frequency for bandpass filter
+        transition_width_percent (float): transition width as percentage of cutoff frequencies
     
-    Returns:
-    --------
-    numpy.ndarray
-        Filtered data
+    returns:
+        numpy.ndarray: filtered data
     """
     # Create filters
     bandpass_b, bandpass_a = create_bandpass_filter(low_cutoff, high_cutoff, sampling_rate, transition_width_percent)
@@ -211,17 +181,12 @@ def plot_preprocessed_data(input_file, return_data=False):
     """
     Process a single EMG file and plot all 22 channels. If return_data is True, return the filtered data array.
     
-    Parameters:
-    -----------
-    input_file : str
-        Path to input file
-    return_data : bool
-        If True, return the filtered data array instead of plotting
+        args:
+        input_file (str): path to input file
+        return_data (bool): if True, return the filtered data array instead of plotting
     
-    Returns:
-    --------
-    numpy.ndarray or None
-        Filtered data array if return_data is True, None otherwise
+    returns:
+        numpy.ndarray or None: filtered data array if return_data is True, None otherwise
     """
     try:
         # Read the data, skipping header rows
@@ -321,9 +286,6 @@ def plot_preprocessed_data(input_file, return_data=False):
             tick_positions = np.sort(tick_positions)
             tick_labels = [f'{tp:.1f}' for tp in tick_positions]
             
-            # ax.set_yticks(tick_positions)
-            # ax.set_yticklabels(tick_labels, fontsize=6, rotation=0)
-            
             # Set x-ticks every second
             ax.set_xticks(x_ticks)
             
@@ -349,13 +311,14 @@ def plot_preprocessed_data(input_file, return_data=False):
         if return_data:
             return None
 
-# =============================================================================
-# NEW SEGMENT EXTRACTION FUNCTIONS
-# =============================================================================
 def get_center_times():
     """
     Prompt the user for center times (in seconds) as a comma-separated list.
-    Returns a sorted list of floats.
+
+    args:
+        None
+    returns:
+        center_times (list): sorted list of floats
     """
     while True:
         center_str = input("Enter center times in seconds (comma-separated): ")
@@ -369,7 +332,11 @@ def get_center_times():
 def get_filenames_for_segments(num_segments):
     """
     Prompt the user for output filenames for each segment except the last.
-    Returns a list of filenames.
+
+    args:   
+        num_segments (int): number of segments to extract
+    returns:
+        filenames (list): list of filenames
     """
     filenames = []
     for i in range(num_segments):
@@ -382,7 +349,15 @@ def get_filenames_for_segments(num_segments):
 def extract_segments_centered(output_data, center_times, segment_duration, sampling_rate):
     """
     Extract segments of specified duration centered at each center time.
-    Returns a list of numpy arrays (segments).
+
+    args:
+        output_data (numpy.ndarray): input data array
+        center_times (list): list of center times
+        segment_duration (float): duration of each segment
+        sampling_rate (float): sampling rate in Hz
+    returns:
+        segments (list): list of numpy arrays (segments)
+        segment_indices (list): list of segment indices
     """
     num_samples = output_data.shape[0]
     total_time = num_samples / sampling_rate
@@ -408,6 +383,15 @@ def extract_segments_centered(output_data, center_times, segment_duration, sampl
 def plot_segment(segment_data, sampling_rate, channels_to_plot, input_file=None, center_time=None):
     """
     Plot a segment of EMG data (all or selected channels).
+
+    args:
+        segment_data (numpy.ndarray): input data array
+        sampling_rate (float): sampling rate in Hz
+        channels_to_plot (list): list of channels to plot
+        input_file (str): path to input file
+        center_time (float): center time of the segment
+    returns:
+        None
     """
     time_axis = np.arange(segment_data.shape[0]) / sampling_rate
     num_channels_to_plot = len(channels_to_plot)
@@ -482,14 +466,7 @@ def save_extracted_segments(segments, filenames, input_file, oral_prep_dir, swal
     df.to_csv(out_path, index=False, header=False, float_format='%.6g', sep=',')
     print(f"Saved last segment to {out_path}")
 
-# =============================================================================
-# MAIN PROCESSING SCRIPT
-# =============================================================================
-
 def main():
-    """
-    Main function to process a single EMG file and plot the results.
-    """
     # Use the configured input file or prompt user if not set
     input_file = INPUT_FILE
     

@@ -1,19 +1,18 @@
 '''
 This script temporally aligns IMU signals from multiple files.
 '''
-
-# ======= CONFIGURATION =======
-input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\extracted signals\yogurt 20 ml edited"  # <-- Set your input folder path here, or leave blank to select interactively
-output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\temporally aligned and averaged"  # <-- Set your output folder path here
-align_channel = 18  # <-- Set the channel number (1-based, e.g., 1 for first channel, 22 for last channel)
-n_channels = 22
-# ============================
-
 import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from tkinter import Tk, filedialog
+
+# ============================== CONFIGURATION ==============================
+input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\extracted signals\yogurt 20 ml edited"  
+output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\temporally aligned and averaged"  
+align_channel = 18  
+n_channels = 22
+# ===========================================================================
 
 def get_txt_files(folder):
     return [os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith('.txt')]

@@ -2,9 +2,8 @@ import os
 import shutil
 
 # ---------------- CONFIGURATION ----------------
-# Set your input and output directories here
-INPUT_DIR = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\wenjian"  # e.g., r"data/07_18_25/original"
-OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian"  # e.g., r"data/07_18_25/filtered"
+INPUT_DIR = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\wenjian"  
+OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian"  
 # ----------------------------------------------
 
 def main():

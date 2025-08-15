@@ -7,6 +7,13 @@ import matplotlib.pyplot as plt
 from sklearn.decomposition import FastICA, PCA # type: ignore
 import os
 
+# ============================== CONFIGURATION ==============================
+file_path = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\spikes removed\apple 5 ml 1.txt"  
+sampling_rate = 500  
+num_channels_to_process = 16
+max_points_to_plot = 5000  
+# ===========================================================================
+
 def load_emg_data(file_path):
     """
     Load data from a text file (no time column, one header row).
@@ -23,6 +30,14 @@ def load_emg_data(file_path):
 def plot_data(data, time, title_prefix='', max_points_to_plot=5000):
     """
     Generic function to plot EMG data channels.
+
+    args:
+        data (pandas.DataFrame): DataFrame with EMG data
+        time (numpy.ndarray): Time vector
+        title_prefix (str): Prefix for the plot title
+        max_points_to_plot (int): Maximum number of points to plot
+    returns:
+        None
     """
     if len(time) > max_points_to_plot:
         step = len(time) // max_points_to_plot
@@ -79,6 +94,14 @@ def plot_ica_components(components, time, max_points_to_plot=5000, sampling_rate
     """
     Plots the separated ICA components. Decimates data if it's too long.
     Smooths each component using RMS smoothing with a 0.2s window.
+
+    args:
+        components (numpy.ndarray): ICA components
+        time (numpy.ndarray): Time vector
+        max_points_to_plot (int): Maximum number of points to plot
+        sampling_rate (int): Sampling rate of the EMG data
+    returns:
+        None
     """
     if len(time) > max_points_to_plot:
         step = len(time) // max_points_to_plot
@@ -112,13 +135,6 @@ def plot_ica_components(components, time, max_points_to_plot=5000, sampling_rate
     plt.show()
 
 def main():
-    # ======= CONFIGURATION =======
-    file_path = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\spikes removed\apple 5 ml 1.txt"  # <-- Set your input file path
-    sampling_rate = 500  # Hz
-    num_channels_to_process = 16
-    max_points_to_plot = 5000  # Plot a max of 5000 points to keep it fast
-    # =============================
-
     # Load the data
     print("Loading data...")
     data = load_emg_data(file_path)

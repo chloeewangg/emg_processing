@@ -9,25 +9,23 @@ from scipy.ndimage import gaussian_filter
 import re
 import os
 
-# ======= MAIN CONFIGURATION (EDIT THESE VALUES) =======
+# ============================== CONFIGURATION ==============================
 FILE_PATH = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\temporally aligned and averaged\imu aligned\yogurt 20 ml edited temporal average.txt"  
-WINDOW_SIZE = 30         # Number of data points per frame
-PLOT_START_FRAME = 0     # Start frame index for plotting
-PLOT_END_FRAME = None    # End frame index for plotting (None for all)
-normalize_by_max = True  # Set to True to normalize by max in plot interval
-MAX_AMPLITUDE = 10        # Maximum EMG amplitude in mV for color scaling
-AUTO_SET_MAX_AMPLITUDE = True  # Set to True to auto-set max amplitude from data
-# List of channels to display (1-16). Unselected channels will appear white.
-# Example: SELECTED_CHANNELS = [1, 2, 3, 4] to show only channels 1-4
-SELECTED_CHANNELS = [1, 2, 3, 4]  # Test with only first 4 channels
-# =====================================================
+WINDOW_SIZE = 30        
+PLOT_START_FRAME = 0     
+PLOT_END_FRAME = None    
+normalize_by_max = True  
+MAX_AMPLITUDE = 10       
+AUTO_SET_MAX_AMPLITUDE = True  
+SELECTED_CHANNELS = [1, 2, 3, 4]  
+# ===========================================================================
 
 class EMGMuscleActivationMap:
     def __init__(self, file_path, window_size=25, max_amplitude=10,
                  normalize_interval_max=False, plot_start_frame=None, plot_end_frame=None, normalize_by_max=False, auto_set_max_amplitude=True, selected_channels=None):
         """
         Initialize the EMG muscle activation map visualization.
-        Args:
+        args:
             file_path (str): Path to the LabChart text file
             window_size (int): Number of data points per frame
             max_amplitude (float): Maximum EMG amplitude in mV for color scaling
@@ -37,6 +35,8 @@ class EMGMuscleActivationMap:
             normalize_by_max (bool): Whether to normalize by max in plot interval
             auto_set_max_amplitude (bool): Whether to auto-set max amplitude from data
             selected_channels (list): List of channel numbers to display (1-16)
+        returns:
+            None
         """
         self.file_path = file_path
         self.window_size = window_size
@@ -109,8 +109,11 @@ class EMGMuscleActivationMap:
         """
         Compute the grid with EMG values for a specific data index.
         Only selected channels will show data; unselected channels will be white.
-        Args:
+
+        args:
             data_idx (int): Data index in the data array
+        returns:
+            grid (numpy.ndarray): Grid with EMG values
         """
         if self.data is None or data_idx >= self.data.shape[0]:
             return np.zeros((4, 4))
@@ -146,6 +149,13 @@ class EMGMuscleActivationMap:
         """
         Create the visualization with a grid of frames. Plots frames within the specified frame window if provided.
         If normalize_by_max is True, data is normalized by max in plot interval and color scale is set to [0, 1].
+
+        args:
+            plot_start_frame (int): Start frame index for plotting
+            plot_end_frame (int): End frame index for plotting
+            normalize_by_max (bool): Whether to normalize by max in plot interval
+        returns:
+            None
         """
         if self.data is None:
             print("Error: No data loaded.")

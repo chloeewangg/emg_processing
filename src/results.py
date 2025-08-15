@@ -3,6 +3,15 @@ import matplotlib.pyplot as plt
 from src.models import single_models
 
 def plot_single_models(accuracies, precisions, recalls, f1_scores):
+    '''
+    Plots single models.
+    
+    args:
+        accuracies (list): list of accuracies
+        precisions (list): list of precisions
+        recalls (list): list of recalls
+        f1_scores (list): list of f1 scores
+    '''
     model_names = [name for name, _ in single_models]
 
     x = np.arange(len(single_models))  
@@ -22,6 +31,12 @@ def plot_single_models(accuracies, precisions, recalls, f1_scores):
     plt.show()
 
 def plot_accuracy(accuracies):
+    '''
+    Plots accuracy for single models.
+
+    args:
+        accuracies (list): list of accuracies
+    '''
     model_names = [name for name, _ in single_models]
 
     plt.bar(model_names, accuracies, width=0.5)

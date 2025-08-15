@@ -6,10 +6,11 @@ import numpy as np
 import pandas as pd
 import os
 
-# User input for file path and output folder
+# ============================== CONFIGURATION ==============================
 file_path = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\spikes removed\apple 5 ml 1.txt"
 output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\06_18_25 processed text\SNR"
 sampling_rate = 500
+# ===========================================================================
 
 # Load data (assume one header row, no time column)
 data = pd.read_csv(file_path, sep=',', header=0)

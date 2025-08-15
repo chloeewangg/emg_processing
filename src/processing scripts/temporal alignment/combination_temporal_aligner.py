@@ -7,12 +7,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from tkinter import Tk, filedialog
 
-# ======= CONFIGURATION =======
+# ============================== CONFIGURATION ==============================
 input_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\contraction signals\yogurt 20 ml"
 output_folder = r"C:\Users\chloe\OneDrive\Desktop\LEMG research\data\06_18_25\all bandpass 20_200 and notch\averaged"  
 n_channels = 22
-peak_channel = 18  # Channel to use for finding the contraction peak (1-based indexing)
-# =============================
+peak_channel = 18  
+# ===========================================================================
 
 def load_emg_files(folder):
     files = [os.path.join(folder, f) for f in os.listdir(folder) if f.lower().endswith('.txt')]
@@ -49,11 +49,11 @@ def center_data_around_peak(data, peak_channel):
     Center the data around the maximum peak in the specified channel.
     Trims data points from the longer end to make both sides equal.
     
-    Args:
-        data: DataFrame with EMG data
-        peak_channel: Channel index (0-based) to use for finding the peak
-    
-    Returns:
+    args:   
+        data (DataFrame): DataFrame with EMG data
+        peak_channel (int): Channel index (0-based) to use for finding the peak
+
+    returns:
         DataFrame with centered data
     """
     if peak_channel >= data.shape[1]:
@@ -91,6 +91,16 @@ def center_data_around_peak(data, peak_channel):
     return centered_data
 
 def segment_data(data, n_segments=10):
+    """
+    Segment the data into n_segments equal parts.
+    
+    args:
+        data (DataFrame): DataFrame with EMG data
+        n_segments (int): Number of segments to divide the data into
+        
+    returns:
+        list of DataFrames: List of segments
+    """
     n_samples = len(data)
     seg_size = n_samples // n_segments
     segments = []
