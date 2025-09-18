@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from src.models import single_models
+from src.models import single_models, multioutput_models
 
 def plot_single_models(accuracies, precisions, recalls, f1_scores):
     '''
@@ -23,26 +23,29 @@ def plot_single_models(accuracies, precisions, recalls, f1_scores):
     plt.bar(x + 1.5*width, f1_scores, width, label='F1 Score', color='lightblue')
 
     plt.legend(loc='upper left', bbox_to_anchor=(1.05, 1))
-    plt.xticks(x, labels=model_names, rotation=-45)
+    plt.xticks(x, labels=model_names, rotation=45)
     plt.xlabel('Model')
     plt.ylabel('Percent')
 
     plt.tight_layout()
     plt.show()
 
-def plot_accuracy(accuracies):
+def plot_acc(acc):
     '''
-    Plots accuracy for single models.
+    Plots accuracy.
 
     args:
         accuracies (list): list of accuracies
     '''
     model_names = [name for name, _ in single_models]
 
-    plt.bar(model_names, accuracies, width=0.5)
+    plt.bar(model_names, acc, width=0.5)
 
-    plt.xticks(rotation=-45)
+    for i in range(len(model_names)):
+        plt.text(i, acc[i] // 2, round(acc[i], 1), ha='center')
+
+    plt.xticks(rotation=45)
     plt.xlabel('Model')
-    plt.ylabel('Exact Accuracy (%)')
+    plt.ylabel('Accuracy (%)')
 
     plt.show()

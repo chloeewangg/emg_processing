@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 
+from scipy.signal import welch
+
 sampling_rate = 500 # hz
 window_seconds = 0.15 # s
 window_size = int(window_seconds * sampling_rate)
@@ -14,43 +16,55 @@ def mav(data):
 def rms(data):
     return np.sqrt(np.mean(data**2,axis=0))  
     
-# wavelength
-def wavelength(data):
-    return np.sum(np.abs(np.diff(data)), axis=0)
-    
 # zero crossing rate
 def zcr(data):
     return np.sum(np.diff(np.sign(data), axis=0) != 0, axis=0) / (len(data)-1)
 
 # variance
-def var(data):
+def variance(data):
     return np.var(data, axis=0)
 
+# slope sign change
+def ssc(data):
+    diff1 = np.diff(data, axis=0)
+    diff2 = np.diff(diff1, axis=0)
+    ssc = np.sum(((diff1[:-1] * diff1[1:]) < 0) & (np.abs(diff2) >= 1e-6), axis=0)
+    return ssc
+
 # absolute difference
-def abs_diffs_signal(data):
+def abs_diffs(data):
     return np.sum(np.abs(np.diff(data,axis=0)),axis=0)
 
 # mean frequency
 def mean_freq(data, fs=500):
-    freqs = np.fft.rfftfreq(len(data), d=1/fs)
-    spectrum = np.abs(np.fft.rfft(data))**2
-    return np.sum(freqs * spectrum) / np.sum(spectrum)
+    freqs, psd = compute_psd(data, fs)
+    return np.sum(freqs * psd) / np.sum(psd)
 
 # median frequency
 def median_freq(data, fs=500):
-    freqs = np.fft.rfftfreq(len(data), d=1/fs)
-    spectrum = np.abs(np.fft.rfft(data))**2
-    cumulative = np.cumsum(spectrum)
+    freqs, psd = compute_psd(data, fs)
+    cumulative = np.cumsum(psd)
     total = cumulative[-1]
     med_idx = np.searchsorted(cumulative, total / 2)
     return freqs[med_idx]
 
 # peak frequency
 def peak_freq(data, fs=500):
-    freqs = np.fft.rfftfreq(len(data), d=1/fs)
-    spectrum = np.abs(np.fft.rfft(data))**2
-    peak_idx = np.argmax(spectrum)
+    freqs, psd = compute_psd(data, fs)
+    peak_idx = np.argmax(psd)
     return freqs[peak_idx]
+
+# total power (integrated PSD)
+def total_power(data, fs=500):
+    freqs, psd = compute_psd(data, fs)
+    df = freqs[1] - freqs[0]  # frequency resolution
+    return np.sum(psd) * df
+
+# bandwidth (variance around mean frequency)
+def bandwidth(data, fs=500):
+    freqs, psd = compute_psd(data, fs)
+    mean_f = np.sum(freqs * psd) / np.sum(psd)
+    return np.sqrt(np.sum(((freqs - mean_f) ** 2) * psd) / np.sum(psd))
 
 # shannon entropy
 def shannon_entropy(data, num_bins=30):
@@ -66,8 +80,14 @@ def shannon_entropy(data, num_bins=30):
 def iemg(data):
     return np.sum(np.abs(data))
 
+# helper: compute Welch PSD
+def compute_psd(data, fs=500):
+    nperseg = min(500, len(data))
+    freqs, psd = welch(data, fs=fs, nperseg=nperseg, window='hamming')
+    return freqs, psd
+
 # make df from data path
-def make_df(data_path, exclude, rectify=False, smooth=False):
+def make_df(data_path, exclude, rectify=False, smooth=False, all_features=True):
     '''
     Makes feature dataframe from signals in data path.
     
@@ -114,7 +134,10 @@ def make_df(data_path, exclude, rectify=False, smooth=False):
             sample_df['volume'] = volume
             sample_df_grouped = sample_df.groupby(['substance', 'volume'])
 
-            features_df = sample_df_grouped.agg(['min', 'max', mav, rms, wavelength, var, abs_diffs_signal, shannon_entropy, iemg])
+            if all_features:
+                features_df = sample_df_grouped.agg(['min', 'max', mav, rms, zcr, variance, ssc, abs_diffs, mean_freq, total_power, iemg, shannon_entropy, median_freq, peak_freq, bandwidth])
+            else:
+                features_df = sample_df_grouped.agg(['min', ssc, abs_diffs, shannon_entropy, median_freq, peak_freq, bandwidth])
 
             df = pd.concat([df, features_df])
     

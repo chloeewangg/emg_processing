@@ -16,12 +16,36 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 
-svm_model = svm.SVC(kernel='linear', random_state=42)
-knn_model = KNeighborsClassifier(n_neighbors=3)
-dt_model = DecisionTreeClassifier(random_state=42)
+svm_model = svm.SVC(
+                    kernel='linear', 
+                    C=5,
+                    random_state=42)
+
+knn_model = KNeighborsClassifier(
+                    n_neighbors=10, 
+                    weights='distance')
+
+dt_model = DecisionTreeClassifier(
+                    max_depth=10, 
+                    min_samples_split=5, 
+                    min_samples_leaf=3,
+                    random_state=42)
+
 nb_model = GaussianNB()
-regression_model = LogisticRegression(max_iter=500, random_state=42)
-gb_model = GradientBoostingClassifier(random_state=42)
+
+regression_model = LogisticRegression(
+                    penalty="l2",
+                    C=5,
+                    solver="liblinear",
+                    max_iter=500,
+                    random_state=42)
+
+gb_model = GradientBoostingClassifier(
+                    n_estimators=100,
+                    max_depth=2,
+                    learning_rate=0.05,
+                    subsample=0.8,
+                    random_state=42)
 
 single_models = [['SVM', svm_model],
           ['KNN', knn_model],
@@ -69,7 +93,7 @@ def make_split(x, y, random_state):
 
     return x_train_scaled, x_test_scaled, y_train, y_test
 
-def train_single_models(x, y, random_state=42):
+def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6)):
     '''
     Trains single models.
 
@@ -83,14 +107,17 @@ def train_single_models(x, y, random_state=42):
         recalls (list): list of recalls
         f1_scores (list): list of f1 scores
     '''
-    accuracies = []
-    precisions = []
-    recalls = []
-    f1_scores = []
+    accuracies, precisions, recalls, f1_scores = [], [], [], []
 
     x_train_scaled, x_test_scaled, y_train, y_test = make_split(x, y, random_state)
     
     models_copy = [[name, clone(model)] for name, model in single_models]
+
+    if class_names is not None:
+        class_labels = [
+            (k[5:] if k.lower().startswith('redu ') else k).capitalize()
+            for k in class_names.keys()
+        ]
 
     for model in models_copy:
         model[1].fit(x_train_scaled, y_train)
@@ -100,7 +127,7 @@ def train_single_models(x, y, random_state=42):
         precision = precision_score(y_test, y_pred, average='weighted')
         recall = recall_score(y_test, y_pred, average='weighted')
         f1score = f1_score(y_test, y_pred, average='weighted')
-        model_confusion_matrix = confusion_matrix(y_test, y_pred)
+        model_confusion_matrix = confusion_matrix(y_test, y_pred, normalize='true')
 
         accuracies.append(accuracy * 100)
         precisions.append(precision * 100)
@@ -113,16 +140,26 @@ def train_single_models(x, y, random_state=42):
         print(f'Recall: {recall:.4f}')
         print(f'F1 score: {f1score:.4f}')
         
-        plt.figure(figsize=(4, 3))
-        sns.heatmap(model_confusion_matrix, annot=True, fmt='d', cmap='Blues', xticklabels=model[1].classes_, yticklabels=model[1].classes_)
+        plt.figure(figsize=cm_size)
+
+        if class_names == None:
+            class_labels = model[1].classes_
+
+        sns.heatmap(model_confusion_matrix, annot=True, fmt='.2f', cmap='Blues', xticklabels=class_labels, yticklabels=class_labels)
+        
+        if class_names != None:
+            plt.xticks(rotation=45, ha='right')
+
+        plt.yticks(rotation=0)
+
         plt.title(f'{model[0]} Confusion Matrix')
-        plt.xlabel('Predicted')
-        plt.ylabel('Actual')
+        plt.xlabel('Predicted Label')
+        plt.ylabel('True Label')
         plt.show()
     
     return accuracies, precisions, recalls, f1_scores
 
-def train_multioutput_models(x, y, random_state=42, show_cm=False, show_metrics=False):
+def train_multioutput_models(x, y, substance_names, random_state=42, show_cm=False, show_metrics=False):
     '''
     Trains multioutput models.
 
@@ -143,6 +180,11 @@ def train_multioutput_models(x, y, random_state=42, show_cm=False, show_metrics=
     x_train, x_test, y_train, y_test = make_split(x, y, random_state)
     
     models_copy = [[name, clone(model)] for name, model in multioutput_models]
+
+    substance_labels = [
+        (k[5:] if k.lower().startswith('redu ') else k).capitalize()
+        for k in substance_names.keys()
+    ]
     
     for model in models_copy:
         model[1].fit(x_train, y_train)
@@ -160,12 +202,21 @@ def train_multioutput_models(x, y, random_state=42, show_cm=False, show_metrics=
         # Confusion matrices for each label
         if show_cm:
             for i, col in enumerate(y_test.columns):
-                cm = confusion_matrix(y_test.iloc[:, i], y_pred[:, i])
-                plt.figure(figsize=(4, 3))
-                sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
+                cm = confusion_matrix(y_test.iloc[:, i], y_pred[:, i], normalize='true')
+
+                if i == 0:
+                    plt.figure(figsize=(8, 6))
+                    sns.heatmap(cm, annot=True, fmt='.2f', cmap='Blues', xticklabels=substance_labels, yticklabels=substance_labels)
+                    plt.xticks(rotation=45, ha='right')
+                else:
+                    plt.figure(figsize=(4, 3))
+                    sns.heatmap(cm, annot=True, fmt='.2f', cmap='Blues')
+                
+                plt.yticks(rotation=0)
+                
                 plt.title(f'{model[0]} Confusion Matrix, {label_names[i]}')
-                plt.xlabel('Predicted')
-                plt.ylabel('Actual')
+                plt.xlabel('Predicted Label')
+                plt.ylabel('True Label')
                 plt.show()
 
     if show_metrics:
@@ -189,24 +240,3 @@ def print_metrics(exact_acc, per_label_acc):
         print(f'Exact Match Accuracy: {exact_acc[i]:.4f}')
         print(f'Per-Label Accuracies: {per_label_acc[i].values if hasattr(per_label_acc[i], "values") else per_label_acc[i]}')
         print('----------------------------')
-
-def plot_acc(acc, plt_title):
-    '''
-    Plots accuracy for multioutput models.
-
-    args:
-        acc (list): list of accuracies
-        plt_title (str): title of plot
-    returns:
-        None
-    '''
-    model_names = [name for name, _ in multioutput_models]
-
-    plt.bar(model_names, acc, width=0.5)
-
-    plt.xticks(rotation=-45)
-    plt.xlabel('Model')
-    plt.ylabel('Exact Accuracy (%)')
-    plt.title(f'Exclude {plt_title}')
-    plt.tight_layout()
-    plt.show()
