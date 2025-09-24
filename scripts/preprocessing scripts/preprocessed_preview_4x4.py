@@ -8,7 +8,7 @@ import glob
 
 # ============================ CONFIGURATION ==============================
 
-INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_08_22_102634\1.txt"
+INPUT_FILE = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\Stream_2025_09_22_220326\1.txt"
 
 # Filter parameters
 SAMPLING_RATE = 500  

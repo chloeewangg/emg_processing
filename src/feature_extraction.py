@@ -80,6 +80,34 @@ def shannon_entropy(data, num_bins=30):
 def iemg(data):
     return np.sum(np.abs(data))
 
+# waveform length
+def waveform_length(data):
+    return np.sum(np.abs(data[1:] - data[:-1]))
+
+# spectral edge frequency
+def spectral_edge_freq(data, fs=500, edge=0.95):
+    freqs, psd = compute_psd(data, fs)
+    cumulative_power = np.cumsum(psd)
+    total_power = cumulative_power[-1]
+    target = edge * total_power
+    idx = np.where(cumulative_power >= target)[0][0]
+    return freqs[idx]
+
+# teager-kaiser energy operator
+def tkeo(data):
+    tkeo_signal = data[1:-1]**2 - data[:-2]*data[2:]
+    return np.mean(tkeo_signal)
+
+# crest factor
+def crest_factor(data):
+    peak = np.max(np.abs(data))
+    rms = np.sqrt(np.mean(data**2))
+    return peak / rms
+
+# peak to peak
+def peak_to_peak(data):
+    return np.max(data) - np.min(data)
+
 # helper: compute Welch PSD
 def compute_psd(data, fs=500):
     nperseg = min(500, len(data))
@@ -87,7 +115,7 @@ def compute_psd(data, fs=500):
     return freqs, psd
 
 # make df from data path
-def make_df(data_path, exclude, rectify=False, smooth=False, all_features=True):
+def make_df(data_path, exclude, rectify=False, smooth=False):
     '''
     Makes feature dataframe from signals in data path.
     
@@ -134,10 +162,23 @@ def make_df(data_path, exclude, rectify=False, smooth=False, all_features=True):
             sample_df['volume'] = volume
             sample_df_grouped = sample_df.groupby(['substance', 'volume'])
 
-            if all_features:
-                features_df = sample_df_grouped.agg(['min', 'max', mav, rms, zcr, variance, ssc, abs_diffs, mean_freq, total_power, iemg, shannon_entropy, median_freq, peak_freq, bandwidth])
-            else:
-                features_df = sample_df_grouped.agg(['min', ssc, abs_diffs, shannon_entropy, median_freq, peak_freq, bandwidth])
+            features_df = sample_df_grouped.agg(['min', 
+                                                'max', 
+                                                peak_to_peak, 
+                                                mav, 
+                                                rms, 
+                                                variance, 
+                                                ssc, 
+                                                abs_diffs, 
+                                                total_power, 
+                                                iemg, 
+                                                shannon_entropy, 
+                                                mean_freq, 
+                                                median_freq, 
+                                                peak_freq, 
+                                                bandwidth,
+                                                spectral_edge_freq,
+                                                crest_factor])
 
             df = pd.concat([df, features_df])
     

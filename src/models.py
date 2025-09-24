@@ -7,10 +7,11 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.base import clone
-
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.decomposition import PCA
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -18,15 +19,15 @@ import numpy as np
 
 svm_model = svm.SVC(
                     kernel='linear', 
-                    C=5,
+                    C=0.1,
                     random_state=42)
 
 knn_model = KNeighborsClassifier(
-                    n_neighbors=10, 
-                    weights='distance')
+                    n_neighbors=15, 
+                    weights='uniform')
 
 dt_model = DecisionTreeClassifier(
-                    max_depth=10, 
+                    max_depth=6, 
                     min_samples_split=5, 
                     min_samples_leaf=3,
                     random_state=42)
@@ -35,7 +36,7 @@ nb_model = GaussianNB()
 
 regression_model = LogisticRegression(
                     penalty="l2",
-                    C=5,
+                    C=0.1,
                     solver="liblinear",
                     max_iter=500,
                     random_state=42)
@@ -91,6 +92,10 @@ def make_split(x, y, random_state):
     x_train_scaled = scaler.fit_transform(x_train)
     x_test_scaled = scaler.transform(x_test)
 
+    #pca = PCA(n_components=0.90)
+    #x_train_pca = pca.fit_transform(x_train_scaled)
+    #x_test_pca  = pca.transform(x_test_scaled)
+
     return x_train_scaled, x_test_scaled, y_train, y_test
 
 def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6)):
@@ -109,7 +114,7 @@ def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6))
     '''
     accuracies, precisions, recalls, f1_scores = [], [], [], []
 
-    x_train_scaled, x_test_scaled, y_train, y_test = make_split(x, y, random_state)
+    x_train, x_test, y_train, y_test = make_split(x, y, random_state)
     
     models_copy = [[name, clone(model)] for name, model in single_models]
 
@@ -120,8 +125,8 @@ def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6))
         ]
 
     for model in models_copy:
-        model[1].fit(x_train_scaled, y_train)
-        y_pred = model[1].predict(x_test_scaled)
+        model[1].fit(x_train, y_train)
+        y_pred = model[1].predict(x_test)
         
         accuracy = accuracy_score(y_test, y_pred)
         precision = precision_score(y_test, y_pred, average='weighted')
