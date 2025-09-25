@@ -2,8 +2,8 @@ import os
 import shutil
 
 # ---------------- CONFIGURATION ----------------
-INPUT_DIR = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\wenjian"  
-OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian"  
+INPUT_DIR = r"C:\Users\chloe\Documents\FreeBCI_GUI\Recordings\libing"  
+OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\original\2"  
 # ----------------------------------------------
 
 def main():

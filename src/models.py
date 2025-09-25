@@ -19,52 +19,42 @@ import numpy as np
 
 svm_model = svm.SVC(
                     kernel='linear', 
-                    C=0.1,
                     random_state=42)
 
 knn_model = KNeighborsClassifier(
-                    n_neighbors=15, 
+                    n_neighbors=3, 
                     weights='uniform')
 
 dt_model = DecisionTreeClassifier(
-                    max_depth=6, 
-                    min_samples_split=5, 
-                    min_samples_leaf=3,
                     random_state=42)
 
 nb_model = GaussianNB()
 
 regression_model = LogisticRegression(
                     penalty="l2",
-                    C=0.1,
                     solver="liblinear",
-                    max_iter=500,
                     random_state=42)
 
 gb_model = GradientBoostingClassifier(
-                    n_estimators=100,
-                    max_depth=2,
-                    learning_rate=0.05,
-                    subsample=0.8,
                     random_state=42)
 
 single_models = [['SVM', svm_model],
           ['KNN', knn_model],
-          ['Decision Tree', dt_model],
+          # ['Decision Tree', dt_model],
           ['Naive Bayes', nb_model],
           ['Logistic Regression', regression_model],
           ['Gradient Boost', gb_model]]
 
 multioutput_models = [['SVM', MultiOutputClassifier(svm_model)],
           ['KNN', MultiOutputClassifier(knn_model)],
-          ['Decision Tree', MultiOutputClassifier(dt_model)],
+          # ['Decision Tree', MultiOutputClassifier(dt_model)],
           ['Naive Bayes', MultiOutputClassifier(nb_model)],
           ['Logistic Regression', MultiOutputClassifier(regression_model)],
           ['Gradient Boost', MultiOutputClassifier(gb_model)]]
 
 label_names = ['Substance', 'Volume']
 
-def make_split(x, y, random_state):
+def make_split(x, y, random_state, components=0.9):
     '''
     Splits data into training and test sets.
 
@@ -92,13 +82,13 @@ def make_split(x, y, random_state):
     x_train_scaled = scaler.fit_transform(x_train)
     x_test_scaled = scaler.transform(x_test)
 
-    #pca = PCA(n_components=0.90)
-    #x_train_pca = pca.fit_transform(x_train_scaled)
-    #x_test_pca  = pca.transform(x_test_scaled)
+    pca = PCA(n_components=components)
+    x_train_pca = pca.fit_transform(x_train_scaled)
+    x_test_pca  = pca.transform(x_test_scaled)
 
-    return x_train_scaled, x_test_scaled, y_train, y_test
+    return x_train_pca, x_test_pca, y_train, y_test
 
-def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6)):
+def train_single_models(x, y, random_state=42, substance_names=None, cm_size=(8, 6)):
     '''
     Trains single models.
 
@@ -118,10 +108,10 @@ def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6))
     
     models_copy = [[name, clone(model)] for name, model in single_models]
 
-    if class_names is not None:
+    if substance_names is not None:
         class_labels = [
             (k[5:] if k.lower().startswith('redu ') else k).capitalize()
-            for k in class_names.keys()
+            for k in substance_names.keys()
         ]
 
     for model in models_copy:
@@ -147,13 +137,13 @@ def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6))
         
         plt.figure(figsize=cm_size)
 
-        if class_names == None:
+        if substance_names == None:
             class_labels = model[1].classes_
 
         sns.heatmap(model_confusion_matrix, annot=True, fmt='.2f', cmap='Blues', xticklabels=class_labels, yticklabels=class_labels)
         
-        if class_names != None:
-            plt.xticks(rotation=45, ha='right')
+        if substance_names != None:
+            plt.xticks(rotation=-45)
 
         plt.yticks(rotation=0)
 
@@ -164,7 +154,7 @@ def train_single_models(x, y, random_state=42, class_names=None, cm_size=(8, 6))
     
     return accuracies, precisions, recalls, f1_scores
 
-def train_multioutput_models(x, y, substance_names, random_state=42, show_cm=False, show_metrics=False):
+def train_multioutput_models(x, y, substance_names, volume_names=[0, 1, 5, 10, 20],random_state=42, show_cm=False, show_metrics=False):
     '''
     Trains multioutput models.
 
@@ -212,10 +202,10 @@ def train_multioutput_models(x, y, substance_names, random_state=42, show_cm=Fal
                 if i == 0:
                     plt.figure(figsize=(8, 6))
                     sns.heatmap(cm, annot=True, fmt='.2f', cmap='Blues', xticklabels=substance_labels, yticklabels=substance_labels)
-                    plt.xticks(rotation=45, ha='right')
+                    plt.xticks(rotation=-45)
                 else:
                     plt.figure(figsize=(4, 3))
-                    sns.heatmap(cm, annot=True, fmt='.2f', cmap='Blues')
+                    sns.heatmap(cm, annot=True, fmt='.2f', cmap='Blues', xticklabels=volume_names, yticklabels=volume_names)
                 
                 plt.yticks(rotation=0)
                 

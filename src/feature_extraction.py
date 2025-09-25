@@ -164,7 +164,6 @@ def make_df(data_path, exclude, rectify=False, smooth=False):
 
             features_df = sample_df_grouped.agg(['min', 
                                                 'max', 
-                                                peak_to_peak, 
                                                 mav, 
                                                 rms, 
                                                 variance, 
@@ -174,9 +173,7 @@ def make_df(data_path, exclude, rectify=False, smooth=False):
                                                 iemg, 
                                                 shannon_entropy, 
                                                 mean_freq, 
-                                                median_freq, 
                                                 peak_freq, 
-                                                bandwidth,
                                                 spectral_edge_freq,
                                                 crest_factor])
 

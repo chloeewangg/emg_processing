@@ -8,7 +8,7 @@ import glob
 
 # ============================ CONFIGURATION ==============================
 # Input file path   
-INPUT_FILE = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian\original\yogurt 10\1.txt"
+INPUT_FILE = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\3\original\yogurt 10\10.txt"
 
 # Filter parameters
 SAMPLING_RATE = 500  
@@ -22,15 +22,15 @@ NUM_PROCESSED_CHANNELS = 16
 TOTAL_CHANNELS = 22 
 
 # Plotting parameters
-EXCLUDE_SECONDS = 0.5 
+EXCLUDE_SECONDS = 0.5
 
 # Channels to plot (1-based indexing, e.g., [1, 2, 3, 4] for channels 1, 2, 3, 4)
 # Leave empty or set to None to plot all channels
 CHANNELS_TO_PLOT = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]  
 
 # Output directories
-ORAL_PREP_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian\extracted signals\other"
-SWALLOW_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\wenjian\extracted signals\yogurt 10"
+ORAL_PREP_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\3\original\other"
+SWALLOW_OUTPUT_DIR = r"C:\Users\chloe\OneDrive\Desktop\swallow EMG\data\participants\3\extracted signals\yogurt 10"
 
 # Segment extraction parameter
 SEGMENT_DURATION = 2 

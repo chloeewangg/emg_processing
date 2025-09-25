@@ -44,7 +44,7 @@ def plot_acc(acc):
     for i in range(len(model_names)):
         plt.text(i, acc[i] // 2, round(acc[i], 1), ha='center')
 
-    plt.xticks(rotation=45)
+    plt.xticks(rotation=-45)
     plt.xlabel('Model')
     plt.ylabel('Accuracy (%)')
 
